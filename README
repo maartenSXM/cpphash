@@ -1,0 +1,15 @@
+dehash removes '#'-style comments
+-c|--cpp	keep CPP directives
+-b|--blank	keep blank lines
+-o|--outdir	output dir ("-o -" for stdout)
+-C|--clean	clean output dir
+-v|--verbose	verbose mode
+-h|--help	help
+
+dehash stores dehashed files in ./.dehash.  It can output them to stdout using flag: -o -
+
+dehash was originally written to remove hash-style comments in files that require
+the C-preprocessor for macro features.  Use the -c option to leave CPP directives
+in the dehash-ed files.
+
+
