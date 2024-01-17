@@ -1,7 +1,8 @@
-#!/bin/bash 
+#!/bin/bash
 
 VERBOSE=0
-OUTDIR="./.dehash"
+CLEAN=0
+OUTDIR=./.dehash
 GCC="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -"
 HELP="$0 removes '#'-style comments\n-c|--cpp\tkeep CPP directives\n-b|--blank\tkeep blank lines\n-o|--outdir\toutput dir (\"-o -\" for stdout)\n-C|--clean\tclean output dir\n-v|--verbose\tverbose mode\n-h|--help\thelp"
 
@@ -10,7 +11,7 @@ do
   case $1 in
     -c|--cpp) GCCFLAGS="$GCCFLAGS -DCPP"; shift;;
     -o|--outdir) shift; OUTDIR="$1"; shift;; 
-    -C|--clean) rm -rf $OUTDIR; shift;; 
+    -C|--clean) CLEAN=1; shift;; 
     -b|--blank) GCCFLAGS="$GCCFLAGS -DBLANK"; shift;; 
     -v|--verbose) VERBOSE=1; shift;; 
     -h|--help) echo -e "$HELP"; shift;; 
@@ -18,17 +19,18 @@ do
   esac
 done
 
-if [ $OUTDIR != "-" ]; then
+if [ $CLEAN == 1 ]; then
   if [ $VERBOSE == 1 ]; then
-    mkdir -p $OUTDIR
+    echo rm -rf $OUTDIR
   fi
-  mkdir -p $OUTDIR
+  rm -rf $OUTDIR
 fi
 
 for file in "$@"
 do
   if [ $OUTDIR != "-" ]; then
     OUTFILE=$OUTDIR/$file
+    # create any $OUTDIR path including $file subdirectories
     if [ $VERBOSE == 1 ]; then
       echo mkdir -p $OUTDIR/`dirname $file`
     fi
@@ -61,7 +63,7 @@ do
   #else // CPP
     # // else change it to a SHEBANG token so that cpp wont try grok it.
     # // In this case, SHEBANG can be restored after cpp with:
-    # // sed -e 1 {s,^SHEBANG,#!,}
+    # // sed -e 1 "{s,^SHEBANG,#\!,}"
     1 {s,^#!(.*)$,SHEBANG\1,}
     # // keep cpp directive lines (b=branch next line)
     /^\s*#\s*\(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning\)/b

@@ -12,4 +12,13 @@ dehash was originally written to remove hash-style comments in files that requir
 the C-preprocessor for macro features.  Use the -c option to leave CPP directives
 in the dehash-ed files.
 
+Some possible dehash command variants are:
+ ./dehash -h
+ ./dehash -o - example.txt
+ ./dehash -b -o - example.txt
+ ./dehash -c -b -o - example.txt
+ ./dehash -b -v example.txt; cat ./.dehash/example.txt
+ ./dehash --clean
+
+
 
