@@ -61,10 +61,10 @@ do
     # // if not planning to run output through cpp, line 1 shebang can stay
     1 {/^#!/p}
   #else // CPP
-    # // else change it to a SHEBANG token so that cpp wont try grok it.
-    # // In this case, SHEBANG can be restored after cpp with:
-    # // sed -e 1 "{s,^SHEBANG,#\!,}"
-    1 {s,^#!(.*)$,SHEBANG\1,}
+    # // else change it to a __SHEBANG_ token so that cpp wont try grok it.
+    # // In this case, __SHEBANG_ can be later restored by piping through sed:
+    # // sed -e "1 {s,^__SHEBANG_,#\!,}"
+    1 {s,^#!(.*)$,__SHEBANG_\1,}
     # // keep cpp directive lines (b=branch next line)
     /^\s*#\s*\(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning\)/b
   #endif // CPP
@@ -80,7 +80,7 @@ do
   /(^|\s)$double_quotes_open/{:a;N;ba;}
   /(^|\s)$single_quotes_open/{:b;N;bb;}
   /$B$d/{:c;N;bc;}
-  s,\s*(#).*|($quoted_word|.|\\\$#|\\\\#),\2,g
+  s,\s*#.*|($quoted_word|.|$b$d#|$B#),\1,g
   "'
   #ifndef BLANK
     # // delete blank lines
