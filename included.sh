@@ -1,0 +1,2 @@
+echo xxx
+echo bbbb

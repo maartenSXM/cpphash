@@ -1,11 +1,10 @@
 #!/bin/bash
-# example script
-# test dehash with ./dehash -c -b -o - example.txt
+#include "included.sh"
 
 #ifndef foo
-  #ifdef blort
-    #define glorp
-  #endif # blort
+#ifdef blort
+#define glorp
+#endif # blort
 
 echo "# test";# echo "# test"
 
