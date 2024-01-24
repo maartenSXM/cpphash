@@ -6,6 +6,7 @@ while [[ $# > 0 ]]
 do
   case $1 in
     -c|--cpp)	GCCFLAGS="$GCCFLAGS -DCPP"; shift;;
+    -o|--output) shift 2;;  # deprecated
     -b|--blank)	GCCFLAGS="$GCCFLAGS -DBLANK"; shift;; 
     -h|--help)	echo -e "$HELP"; shift;; 
     *) break
@@ -39,9 +40,9 @@ echo '
     # // if not planning to run output through cpp, line 1 shebang can stay
     1 {/^#!/p}
   #else // CPP
-    # // else change it to cpp directives that generate a shebang.
-    # // note cpp must have -P -nostdinc -traditional-cpp flags
-    1 {s,^#!(.*)$,#define __SHEBANG_ #!\n__SHEBANG_\1,}
+    # // else change it to __SHEBANG__ and caller must change it back
+    # // later with, for example this sed: 1 {s,^__SHEBANG__,#!}
+    1 {s,^#!,__SHEBANG__,}
     # // keep cpp directive lines (b=branch next line)
     /^\s*#\s*\(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning\)/b
   #endif // CPP
