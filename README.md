@@ -46,5 +46,13 @@ Some possible dehash command variants are:
  ./dehash.sh -c -b example.txt
 ```
 
-
+Note: on MacOS, you need GNU sed to run dehash.sh and cpptext.sh. To install GNU sed, please do this:
+```
+brew install gsed
+```
+and then add this line to your .bashrc:
+```
+export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
+```
+and the source your .bashrc before running dehash.sh.
 
