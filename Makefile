@@ -1,7 +1,11 @@
+ifneq (,$(wildcard ./dehash.sh))
+OUTDIR=..
+else
 OUTDIR=.
 -include $(OUTDIR)/cpptext/Makefile.cpptext
+endif
 
-.PHONY update
+.PHONY: update
 # if cpptext non-existent, clone it. Otherwise, only if explicit update
 $(OUTDIR)/cpptext update:
 	-@mkdir $(OUTDIR)
