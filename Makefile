@@ -2,7 +2,6 @@
 # with.  It will clone cpptext under that directory and you can then 
 # use make to build your text files with c preprocessor directive features.
 #
-# if cpptext non-existent, clone it. Otherwise, only if explicit update
 ifneq (,$(wildcard ./dehash.sh))
 OUTDIR=..
 update:
@@ -12,6 +11,7 @@ OUTDIR=.
 $(OUTDIR)/cpptext update:
 endif
 	-@mkdir $(OUTDIR)
+	# if cpptext exists, "git pull" it else clone it
 	-@if [ -d "$(OUTDIR)/cpptext" ]; then 			\
 		echo "Updating git repo $(OUTDIR)/cpptext";	\
 		cd $(OUTDIR)/cpptext; git pull; 		\
