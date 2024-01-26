@@ -1,13 +1,16 @@
+# Copy just this Makefile to any directory that you want to use cpptext
+# with.  It will clone cpptext under that directory and you can then 
+# use make to build your text files with c preprocessor directive features.
+#
+# if cpptext non-existent, clone it. Otherwise, only if explicit update
 ifneq (,$(wildcard ./dehash.sh))
 OUTDIR=..
+update:
 else
 OUTDIR=.
 -include $(OUTDIR)/cpptext/Makefile.cpptext
-endif
-
-.PHONY: update
-# if cpptext non-existent, clone it. Otherwise, only if explicit update
 $(OUTDIR)/cpptext update:
+endif
 	-@mkdir $(OUTDIR)
 	-@if [ -d "$(OUTDIR)/cpptext" ]; then 			\
 		echo "Updating git repo $(OUTDIR)/cpptext";	\
@@ -18,3 +21,4 @@ $(OUTDIR)/cpptext update:
 	fi
 	make
 
+.PHONY: update

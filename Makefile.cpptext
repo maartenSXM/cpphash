@@ -42,10 +42,10 @@ CPPDEFS = -D_PROJTAG_$(PROJTAG)=1 -D_USER_$(USER)=1
 _MAIN	= $(PROJDIR).yaml
 _YAMLS	= $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(PREFIX)*.yaml),$(SRCS)))
 
-DEHASH	= $(OUTDIR)/dehash/dehash.sh --cpp
+DEHASH	= $(OUTDIR)/cpptext/dehash.sh --cpp
 CPP	= gcc -x c -E -P -undef -nostdinc $(CPPINCS) $(CPPDEFS) 
 
-all:	$(OUTDIR)/dehash $(PROJDIR) $(_YAMLS) $(_MAIN)
+all:	$(OUTDIR)/cpptext $(PROJDIR) $(_YAMLS) $(_MAIN)
 ifneq (,$(findstring esphome,$(VIRTUAL_ENV))) # check if esphome venv
 	-@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 		   \
 	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
@@ -63,7 +63,7 @@ else
 endif
 
 
-$(_MAIN) $(_YAMLS): $(OUTDIR)/dehash Makefile
+$(_MAIN) $(_YAMLS): $(OUTDIR)/cpptext Makefile
 
 $(_MAIN): $(PROJDIR)/$(MAIN) $(_YAMLS)
 	@echo "Generating $@ from dehashed files in $(PROJDIR)/"
@@ -92,23 +92,7 @@ ifneq (,$(findstring esphome,$(VIRTUAL_ENV))) # check if esphome venv
 endif
 
 realclean: clean
-	rm -rf $(OUTDIR)/dehash .esphome
+	rm -rf $(OUTDIR)/cpptext .esphome
 
 .PHONY:    clean realclean update
-.PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/dehash
-
-$(OUTDIR)/dehash:
-	-@mkdir -p $(OUTDIR)
-	cd $(OUTDIR); git clone https://github.com/maartenwrs/dehash
-
-# pull dehash repo and this Makefile from github
-update:
-	-@if [ -d "$(OUTDIR)/dehash" ]; then 			\
-		echo "Updating git repo $(OUTDIR)/dehash";	\
-		cd $(OUTDIR)/dehash; git pull; 			\
-	fi
-	-@curl https://raw.githubusercontent.com/maartenwrs/espmake/main/Makefile >Makefile.new 2> /dev/null
-	-@echo "Latest espmake Makefile downloaded as Makefile.new"
-	-@echo "Changes from ./Makefile to latest espmake Makefile are:"
-	-diff Makefile Makefile.new
-
+.PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/cpptext
