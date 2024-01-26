@@ -10,15 +10,17 @@ OUTDIR=.
 -include $(OUTDIR)/cpptext/Makefile.cpptext
 $(OUTDIR)/cpptext update:
 endif
-	-@mkdir $(OUTDIR)
+	-@mkdir -p $(OUTDIR)
 	# if cpptext exists, "git pull" it else clone it
 	-@if [ -d "$(OUTDIR)/cpptext" ]; then 			\
 		echo "Updating git repo $(OUTDIR)/cpptext";	\
 		cd $(OUTDIR)/cpptext; git pull; 		\
 	else							\
 		echo "Cloning git repo $(OUTDIR)/cpptext";	\
-		cd $(OUTDIR); git clone git@github.com:maartenwrs/cpptext \
+		cd $(OUTDIR); git clone git@github.com:maartenwrs/cpptext; \
 	fi
+ifeq (,$(wildcard ./dehash.sh))
 	make
+endif
 
 .PHONY: update
