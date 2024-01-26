@@ -1,3 +1,5 @@
 .dehash
 .cpptext
 example.txt.cpp
+example/Makefile.new
+example/cpptext
