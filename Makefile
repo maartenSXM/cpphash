@@ -24,6 +24,5 @@ $(OUTDIR)/cpptext update:
 		echo "Cloning git repo $(OUTDIR)/cpptext";	\
 		cd $(OUTDIR); git clone git@github.com:maartenwrs/cpptext; \
 	fi
-	make
 
 .PHONY: update
