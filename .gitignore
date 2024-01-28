@@ -3,3 +3,7 @@
 example.txt.cpp
 example/Makefile.new
 example/cpptext
+examples/README.md
+examples/test/.esphome/
+examples/make/.esphome/
+

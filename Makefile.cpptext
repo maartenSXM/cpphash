@@ -1,71 +1,53 @@
-# This Makefile is from https://github.com/maartenwrs/espmake
-# It is esphome project independent since all esphome project config
-# can be conditionally included from yaml, when this Makefile is used
-# to build an esphome project. Instead of editting this Makefile, 
-# consider adding a main.yaml to your project that #includes yaml
-# files for your project as needed.  That will future-proof your Makefile
-# if you ever need to update it using "make update" from the espmake repo.
-# 
-# A convenience c-preprocessor define _PROJTAG$(PROJTAG) is defined so that
-# project-specific yaml can be written inside, for example, #if _PROJTAG_foo
-# ... #endif blocks, when PROJTAG is set to "foo".
-# 
-# A convenience c-preprocessor define _USER_$(USER) is defined so that
-# personal yaml can be written inside, for example, #if _USER_maarten
-# ... #endif blocks, if your userid is 'maarten'.
+# Makefile.cpptext is from https://github.com/maartenwrs/cpptext.
 #
-# Refer to https://github.com/maartenwrs/espmake/blob/main/README.md
+# This file is intended to be included from your project Makefile and
+# depends on $(OUTDIR)/cpptext being a git clone 
+# https://github.com/maartenwrs/cpptext.
+#
+# See https://github.com/maartenwrs/cpptext/blob/main/Makefile for
+# an example of how to automatically clone this repo and include this file
+# from a Makefile.
+#
+# Refer to https://github.com/maartenwrs/cpptext/blob/main/README.md
 # for more details.
 
-MAIN	= main.yaml
-SRCS	= $(wildcard *.yaml)
+MAIN   := main.yaml
+SUFFIX := $(suffix $(MAIN))
 
-# the make rules below require yaml files to have .yaml suffixes.
-ifneq (x$(suffix $(MAIN)),x.yaml)
-  $(error "The suffix of $(MAIN) yaml file must be .yaml")
-endif
+# The make rules below require the processed files to all have the same suffix.
+#
+# By default, process all files with the same suffix in case they are needed.
+SRCS   := $(wildcard *$(SUFFIX))
+
 ifeq ($(shell test -e $(MAIN) || echo -n no),no)
-  $(error "$(MAIN) not found (MAIN=xxx.yaml argument intended?)")
+  $(error "$(MAIN): file not found.")
 endif
 
-ifneq (x$(suffix $(MAIN)),x.yaml)
-  $(error "The suffix of $(MAIN) yaml file must be .yaml")
-endif
+OUTDIR	:= .
+PROJTAG	:= 0
+PREFIX	:= myProj_
+PROJDIR	:= $(OUTDIR)/$(PREFIX)$(PROJTAG)
+CPPINCS := -I$(PROJDIR) -I.
+CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1
 
-OUTDIR	= .
-PROJTAG	= 0
-PREFIX	= myProj_
-PROJDIR	= $(OUTDIR)/$(PREFIX)$(PROJTAG)
-CPPINCS = -I$(PROJDIR) -I.
-CPPDEFS = -D_PROJTAG_$(PROJTAG)=1 -D_USER_$(USER)=1
+DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
+CPP	:= gcc -x c -E -P -undef -nostdinc $(CPPINCS) $(CPPDEFS) 
 
-_MAIN	= $(PROJDIR).yaml
-_YAMLS	= $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(PREFIX)*.yaml),$(SRCS)))
+# _MAIN is the generated file (myProj_0.yaml by default)
+_MAIN	:= $(PROJDIR)$(SUFFIX)
 
-DEHASH	= $(OUTDIR)/cpptext/dehash.sh --cpp
-CPP	= gcc -x c -E -P -undef -nostdinc $(CPPINCS) $(CPPDEFS) 
 
-all:	$(OUTDIR)/cpptext $(PROJDIR) $(_YAMLS) $(_MAIN)
-ifneq (,$(findstring esphome,$(VIRTUAL_ENV))) # check if esphome venv
-	-@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 		   \
-	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
-	    	rm -f $(OUTDIR)/secrets.yaml;				   \
-		echo "re-linking $(OUTDIR)/secrets.yaml";		   \
-	    else							   \
-		echo "linking $(OUTDIR)/secrets.yaml";			   \
-	    fi;								   \
-	    ln -s $(PREFIX)$(PROJTAG)/secrets.yaml $(OUTDIR)/secrets.yaml; \
-	fi
+# _SRCS is $(SRCS) without generated files of the same PREFIX and SUFFIX
+_SRCS	:= $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(PREFIX)*$(SUFFIX)),$(SRCS)))
+
+# generate $(_MAIN) and optionally kickoff a subsequent build
+all: $(OUTDIR)/cpptext $(PROJDIR) $(_SRCS) $(_MAIN)
 	@echo "$(_MAIN) is up to date"
-	esphome compile $(_MAIN)
-else
-	@echo "$(_MAIN) is up to date"
-endif
+	$(BUILD)
 
+$(_MAIN) $(_SRCS): $(OUTDIR)/cpptext Makefile
 
-$(_MAIN) $(_YAMLS): $(OUTDIR)/cpptext Makefile
-
-$(_MAIN): $(PROJDIR)/$(MAIN) $(_YAMLS)
+$(_MAIN): $(PROJDIR)/$(MAIN) $(_SRCS)
 	@echo "Generating $@ from dehashed files in $(PROJDIR)/"
 	$(CPP) -MD -MP -MT $@ -MF $<.d $< > $@
 
@@ -75,24 +57,54 @@ $(OUTDIR):
 $(PROJDIR):
 	-mkdir -p $@
 
-$(PROJDIR)/%.yaml: %.yaml
+$(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
 	$(DEHASH) $< > $@
 
 -include $(wildcard $(PROJDIR)/*.d)
 
 clean:
 	rm -rf $(PROJDIR) $(_MAIN)
-ifneq (,$(findstring esphome,$(VIRTUAL_ENV))) # check if esphome venv
-	@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	\
+	$(CLEAN)
+
+realclean: clean
+	rm -rf $(OUTDIR)/cpptext
+	$(REALCLEAN)
+
+.PHONY:    clean realclean update
+.PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/cpptext
+
+# if generating an esphome project, we need to do some extra stuff
+# mostly because esphome looks for secrets.yaml in the same directory
+# as the esphome yaml file - which might be in $(OUTDIR) and not ".".
+#
+# Also, after generating the esphome yaml, it is handy to kick off the
+# esphome compile.  Finally, the realclean target is extended to cleanup
+# .esphome which gets created during the issued esphome compile.
+#
+ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
+
+# setup secrets.yaml  to be in OUTDIR if needed and then kick-off a build
+BUILD := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
+	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
+	    	rm -f $(OUTDIR)/secrets.yaml;				   \
+		echo "re-linking $(OUTDIR)/secrets.yaml";		   \
+	    else							   \
+		echo "linking $(OUTDIR)/secrets.yaml";			   \
+	    fi;								   \
+	    ln -s $(PREFIX)$(PROJTAG)/secrets.yaml $(OUTDIR)/secrets.yaml; \
+	fi;								   \
+	echo esphome compile $(_MAIN);					   \
+	esphome compile $(_MAIN)
+
+# target "clean" cleans up secrets.yaml from $(OUTDIR), if needed
+CLEAN := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then  \
 	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 		\
 	    	echo "rm $(OUTDIR)/secrets.yaml";		\
 	    	rm -f $(OUTDIR)/secrets.yaml;			\
 	    fi;							\
 	fi
+
+# target "realclean" cleans .esphome from $(OUTDIR)
+REALCLEAN := rm -rf $(OUTDIR)/.esphome
+
 endif
-
-realclean: clean
-	rm -rf $(OUTDIR)/cpptext .esphome
-
-.PHONY:    clean realclean update
-.PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/cpptext
