@@ -11,7 +11,7 @@ ESPHOME := /tmp/esphome.$(shell echo $$PPID)
 test all:
 	@printf "Creating $(ESPMAKE) using espmake from ../example/$(YAML1) ..."
 	@make -C ../make clean > /dev/null; 
-	@make -C ../make BUILD= all >/dev/null 2> /dev/null;
+	@make -C ../make BUILD=@/bin/true all >/dev/null 2> /dev/null;
 	@cd ../make; esphome config $(YAML1) >$(ESPMAKE) 2> /dev/null
 	@printf "done.\n"
 	@printf "Creating $(ESPHOME) using esphome from $(YAML2) ..."

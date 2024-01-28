@@ -11,21 +11,31 @@
 # Refer to https://github.com/maartenwrs/cpptext/blob/main/README.md
 # for more details.
 
-MAIN   := main.yaml
-SUFFIX := $(suffix $(MAIN))
-
-# The make rules below require the processed files to all have the same suffix.
+# conditionally set these so that they can be overridden in Makefile
+# which might include this Makefile.cpptext file. That allows
+# Makefile.cpp text to remain unchanged and more easily updated from
+# the cpptext github repo.
 #
-# By default, process all files with the same suffix in case they are needed.
-SRCS   := $(wildcard *$(SUFFIX))
+MAIN	:= $(if $(MAIN),$(MAIN),main.yaml)
+SUFFIX	:= $(if $(SUFFIX),$(SUFFIX),$(suffix $(MAIN)))
+OUTDIR	:= $(if $(OUTDIR),$(OUTDIR),.)
+PROJTAG	:= $(if $(PROJTAG),$(PROJTAG),0)
+PREFIX	:= $(if $(PREFIX),$(PREFIX),myProj_)
+SRCS	:= $(if $(SRCS),$(SRCS),$(wildcard *$(SUFFIX)))
 
 ifeq ($(shell test -e $(MAIN) || echo -n no),no)
   $(error "$(MAIN): file not found.")
 endif
+ifeq ($(shell test -e $(OUTDIR) || echo -n no),no)
+  $(error "$(OUTDIR): file not found.")
+endif
+ifeq ($(shell which gcc),)
+  $(error "gcc: not found. Please install it")
+endif
+ifeq (,$(findstring GNU,$(shell sed --version)))
+  $(error "GNU sed not found. Please install it")
+endif
 
-OUTDIR	:= .
-PROJTAG	:= 0
-PREFIX	:= myProj_
 PROJDIR	:= $(OUTDIR)/$(PREFIX)$(PROJTAG)
 CPPINCS := -I$(PROJDIR) -I.
 CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1
@@ -80,9 +90,10 @@ realclean: clean
 # Also, after generating the esphome yaml, it is handy to kick off the
 # esphome compile.  Finally, the realclean target is extended to cleanup
 # .esphome which gets created during the issued esphome compile.
-#
+
 ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
 
+ifeq (,$(BUILD))
 # setup secrets.yaml  to be in OUTDIR if needed and then kick-off a build
 BUILD := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
 	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
@@ -95,7 +106,9 @@ BUILD := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
 	fi;								   \
 	echo esphome compile $(_MAIN);					   \
 	esphome compile $(_MAIN)
+endif
 
+ifeq (,$(CLEAN))
 # target "clean" cleans up secrets.yaml from $(OUTDIR), if needed
 CLEAN := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then  \
 	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 		\
@@ -103,8 +116,11 @@ CLEAN := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then  \
 	    	rm -f $(OUTDIR)/secrets.yaml;			\
 	    fi;							\
 	fi
+endif
 
+ifeq (,$(REALCLEAN))
 # target "realclean" cleans .esphome from $(OUTDIR)
 REALCLEAN := rm -rf $(OUTDIR)/.esphome
+endif
 
 endif

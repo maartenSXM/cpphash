@@ -6,11 +6,23 @@
 # "make" will install cpptext under OUTDIR once. Aftewards, it will
 # revert to "make all" of cpptext/Makefile.cpptext.
 #
-# "make update" will update cpptext form github.
+# "make update" will update cpptext from github.
 #
 # Refer to github.com/maartenwrs/cpptext for more details on cpptext.
-#
-OUTDIR := .
+
+# Makefile.cpptext can be customized using these variables:
+MAIN	:= main.yaml
+SUFFIX	:= $(suffix $(MAIN))
+SRCS	:= $(wildcard *$(SUFFIX))
+OUTDIR	:= .
+PREFIX	:= myProj_
+PROJTAG	:= 0
+
+# Advanced: Refer to cpptext/Makefile.cpptext for details as to how
+# the BUILD, CLEAN and REALCLEAN variables are used, before defining them.
+BUILD	    := @/bin/true
+# CLEAN	    := @/bin/true
+# REALCLEAN := @/bin/true
 
 -include $(OUTDIR)/cpptext/Makefile.cpptext
 
