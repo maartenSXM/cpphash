@@ -38,7 +38,7 @@ endif
 
 PROJDIR	:= $(OUTDIR)/$(PREFIX)$(PROJTAG)
 CPPINCS := -I$(PROJDIR) -I.
-CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1
+CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER)
 
 DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
 CPP	:= gcc -x c -E -P -undef -nostdinc $(CPPINCS) $(CPPDEFS) 
@@ -94,7 +94,7 @@ realclean: clean
 ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
 
 ifeq (,$(BUILD))
-# setup secrets.yaml  to be in OUTDIR if needed and then kick-off a build
+# setup secrets.yaml to be in OUTDIR if needed and then kick-off a build
 BUILD := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
 	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
 	    	rm -f $(OUTDIR)/secrets.yaml;				   \
