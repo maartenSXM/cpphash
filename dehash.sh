@@ -13,7 +13,7 @@ do
   esac
 done
 
-GCC="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -"
+GCC="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror -"
 
 file="$1"
 if [ "$file" == "" ]; then

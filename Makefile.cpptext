@@ -41,7 +41,7 @@ CPPINCS := -I$(PROJDIR) -I.
 CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER)
 
 DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
-CPP	:= gcc -x c -E -P -undef -nostdinc $(CPPINCS) $(CPPDEFS) 
+CPP	:= gcc -x c -E -P -undef -Wundef -Werror -nostdinc $(CPPINCS) $(CPPDEFS) 
 
 # _MAIN is the generated file (myProj_0.yaml by default)
 _MAIN	:= $(PROJDIR)$(SUFFIX)

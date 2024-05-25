@@ -5,7 +5,7 @@ dehash="$scriptpath/dehash.sh -c"
 verbose=0
 clean=0
 tempdir=.cpptext
-gcc="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels"
+gcc="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wunder -Werror"
 help="$0: run the C preprocessor (cpp) on files with hash-style comments
 Usage: $0 [-f] [-C] [-v] [-h] [-t <dir>] [-D define|define=<x>] [-I includedir] cppFile [extraFiles]...
 -t|--tempdir\targument is a directory for temporary files. Defaults is .cpptext
