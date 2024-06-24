@@ -66,6 +66,7 @@ $(OUTDIR):
 
 $(PROJDIR):
 	-mkdir -p $@
+	-cd $@ && mkdir -p $(sort $(dir $(SRCS)))
 
 $(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
 	$(DEHASH) $< > $@
