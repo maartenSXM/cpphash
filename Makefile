@@ -1,10 +1,11 @@
 # Copy this Makefile to any directory that you want to use cpptext
-# with. This Makefile will install cpptext under that directory
-# and you can then use make to build your text files with c preprocessor
-# directive features.
+# with. This Makefile will clone cpptext so that its Makefile fragments
+# can be included.
 #
-# "make" will install cpptext under OUTDIR once. Aftewards, it will
-# revert to "make all" of cpptext/Makefile.cpptext.
+# "make" will install cpptext under OUTDIR once. Afterwards, it will
+# revert to "make all" as defined in cpptext/Makefile.cpptext.
+# Note that if your project is for esphome, you may want to
+# uncomment the include below (see *** below).
 #
 # "make update" will update cpptext from github.
 #
@@ -26,15 +27,18 @@ PROJTAG	:= 0
 
 -include $(OUTDIR)/cpptext/Makefile.cpptext
 
+# *** uncomment the following line if using cpptext in an esphome project
+# -include $(OUTDIR)/cpptext/Makefile.esphome
+
 # if $(OUTDIR)/cpptext exists, update it with "git pull" - else "git clone" it
 $(OUTDIR)/cpptext update:
 	-@mkdir -p $(OUTDIR)
-	-@if [ -d "$(OUTDIR)/cpptext" ]; then 			\
-		echo "Updating git repo $(OUTDIR)/cpptext";	\
-		cd $(OUTDIR)/cpptext; git pull; 		\
-	else							\
-		echo "Cloning git repo $(OUTDIR)/cpptext";	\
-		cd $(OUTDIR); git clone git@github.com:maartenwrs/cpptext; \
+	-@if [ -d "$(OUTDIR)/cpptext" ]; then 					\
+		echo "Updating git repo $(OUTDIR)/cpptext";			\
+		cd $(OUTDIR)/cpptext; git pull; 				\
+	else									\
+		echo "Cloning git repo $(OUTDIR)/cpptext";			\
+		cd $(OUTDIR); git clone git@github.com:maartenwrs/cpptext;	\
 	fi
 	make
 

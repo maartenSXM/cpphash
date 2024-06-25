@@ -1,0 +1,41 @@
+# if generating an esphome project, we need to do some extra stuff
+# mostly because esphome looks for secrets.yaml in the same directory
+# as the esphome yaml file - which might be in $(OUTDIR) and not ".".
+#
+# Also, after generating the esphome yaml, it is handy to kick off the
+# esphome compile.  Finally, the realclean target is extended to cleanup
+# .esphome which gets created during the issued esphome compile.
+
+ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
+
+ifeq (,$(BUILD))
+# setup secrets.yaml to be in OUTDIR if needed and then kick-off a build
+BUILD := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
+	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
+	    	rm -f $(OUTDIR)/secrets.yaml;				   \
+		echo "re-linking $(OUTDIR)/secrets.yaml";		   \
+	    else							   \
+		echo "linking $(OUTDIR)/secrets.yaml";			   \
+	    fi;								   \
+	    ln -s $(PREFIX)$(PROJTAG)/secrets.yaml $(OUTDIR)/secrets.yaml; \
+	fi;								   \
+	echo esphome compile $(_MAIN);					   \
+	esphome compile $(_MAIN)
+endif
+
+ifeq (,$(CLEAN))
+# target "clean" cleans up secrets.yaml from $(OUTDIR), if needed
+CLEAN := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then  \
+	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 		\
+	    	echo "rm $(OUTDIR)/secrets.yaml";		\
+	    	rm -f $(OUTDIR)/secrets.yaml;			\
+	    fi;							\
+	fi
+endif
+
+ifeq (,$(REALCLEAN))
+# target "realclean" cleans .esphome from $(OUTDIR)
+REALCLEAN := rm -rf $(OUTDIR)/.esphome
+endif
+
+endif
