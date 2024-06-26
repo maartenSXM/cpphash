@@ -75,7 +75,12 @@ clean:
 	$(CLEAN)
 
 realclean: clean
-	rm -rf $(OUTDIR)/cpptext
+	-@if [ "`git -C cpptext status --porcelain`" != "" ]; then       \
+		echo "Not removing cpptext since it has been modified."; \
+	else								 \
+		echo "rm -rf $(OUTDIR)/cpptext";			 \
+		rm -rf $(OUTDIR)/cpptext;				 \
+	fi
 	$(REALCLEAN)
 
 .PHONY:    clean realclean update
