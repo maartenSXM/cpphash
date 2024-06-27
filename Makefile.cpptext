@@ -1,20 +1,18 @@
-# Makefile.cpptext is from https://github.com/maartensxm/cpptext.
+# Makefile.cpptext is from https://github.com/maartenSXM/cpptext.
 #
 # This file is intended to be included from your project Makefile and
-# depends on $(OUTDIR)/cpptext being a git clone 
-# https://github.com/maartensxm/cpptext.
+# depends on $(OUTDIR)/cpptext being a git clone of
+# https://github.com/maartenSXM/cpptext.
 #
-# See https://github.com/maartensxm/cpptext/blob/main/Makefile for
+# See https://github.com/maartenSXM/cpptext/blob/main/Makefile for
 # an example of how to automatically clone this repo and include this file
 # from a Makefile.
 #
-# Refer to https://github.com/maartensxm/cpptext/blob/main/README.md
+# Refer to https://github.com/maartenSXM/cpptext/blob/main/README.md
 # for more details.
 
-# conditionally set these so that they can be overridden in Makefile
-# which might include this Makefile.cpptext file. That allows
-# Makefile.cpp text to remain unchanged and more easily updated from
-# the cpptext github repo.
+# These can be optionally overridden in a project Makefile that
+# includes this Makefile.cpptext file. 
 
 MAIN	:= $(if $(MAIN),$(MAIN),main.yaml)
 SUFFIX	:= $(if $(SUFFIX),$(SUFFIX),$(suffix $(MAIN)))
@@ -22,6 +20,16 @@ OUTDIR	:= $(if $(OUTDIR),$(OUTDIR),.)
 PROJTAG	:= $(if $(PROJTAG),$(PROJTAG),0)
 PREFIX	:= $(if $(PREFIX),$(PREFIX),myProj_)
 SRCS	:= $(if $(SRCS),$(SRCS),$(wildcard *$(SUFFIX)))
+PREBUILD  := $(if $(PREBUILD),$(PREBUILD),@/bin/true)
+BUILD	  := $(if $(BUILD),$(BUILD),@/bin/true)
+POSTBUILD := $(if $(POSTBUILD),$(POSTBUILD),@/bin/true)
+
+# these are intended to be used by an extra included Makefile
+# template such as Makefile.esphome and not by a project Makefile
+
+BUILD_MORE := $(if $(BUILD_MORE),$(BUILD_MORE),@/bin/true)
+CLEAN_MORE := $(if $(CLEAN_MORE),$(CLEAN_MORE),@/bin/true)
+REALCLEAN_MORE := $(if $(REALCLEAN_MORE),$(REALCLEAN_MORE),@/bin/true)
 
 ifeq ($(shell test -e $(MAIN) || echo -n no),no)
   $(error "$(MAIN): file not found.")
@@ -42,7 +50,6 @@ CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D
 
 DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
 CPP	:= gcc -x c -E -P -undef -Wundef -Werror -nostdinc $(CPPINCS) $(CPPDEFS) 
-
 # _MAIN is the generated file (./myProj_0.yaml by default)
 _MAIN	:= $(PROJDIR)$(SUFFIX)
 
@@ -56,7 +63,10 @@ _DIRS	:= $(OUTDIR) $(PROJDIR) $(sort $(dir $(PROJSRCS)))
 # generate $(_MAIN) and optionally kickoff a subsequent build
 all: mkdirs $(_MAIN)
 	@echo "$(_MAIN) is up to date"
+	$(PREBUILD)
 	$(BUILD)
+	$(BUILD_MORE)
+	$(POSTBUILD)
 
 mkdirs:
 	-mkdir -p $(_DIRS)
@@ -71,8 +81,8 @@ $(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
 -include $(wildcard $(PROJDIR)/*.d)
 
 clean:
-	rm -rf $(PROJDIR) $(_MAIN)
-	$(CLEAN)
+	rm -rf $(PROJDIR) $(_MAIN) $(CLEAN_FILES)
+	$(CLEAN_MORE)
 
 realclean: clean
 	-@if [ "`git -C cpptext status --porcelain`" != "" ]; then       \
@@ -81,8 +91,9 @@ realclean: clean
 		echo "rm -rf $(OUTDIR)/cpptext";			 \
 		rm -rf $(OUTDIR)/cpptext;				 \
 	fi
-	$(REALCLEAN)
+	rm -rf $(PROJDIR) $(REALCLEAN_FILES)
+	$(REALCLEAN_MORE)
 
-.PHONY:    clean realclean update
+.PHONY:    clean realclean 
 .PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/cpptext
 
