@@ -22,7 +22,7 @@ BUILD_MORE := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
 	    ln -s $(PREFIX)$(PROJTAG)/secrets.yaml $(OUTDIR)/secrets.yaml; \
 	fi;								   \
 	echo esphome compile $(_MAIN);					   \
-	esphome compile $(_MAIN)
+	cd $(OUTDIR); esphome compile $(_MAIN)
 
 # target "clean" cleans up secrets.yaml from $(OUTDIR), if needed
 CLEAN_MORE := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then	\

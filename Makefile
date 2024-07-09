@@ -1,21 +1,20 @@
-# Copy this Makefile to any project that you want to use it with.
-# Then, the first time make is run, it will install itself under OUTDIR.
+# "./makefile" and this file, "./Makefile", are based on examples from:
 #
-# This project resides at github.com/maartenSXM/cpptext 
+#       github.com/maartenSXM/cpptext
+#
+# "./makefile" automatically installs cpptext and then includes this file.
+#
+# Note: OUTDIR is specified in the file "./makefile"
 
 MAIN	:= main.yaml
 SUFFIX	:= $(suffix $(MAIN))
-SRCS	:= $(wildcard *$(SUFFIX))
-OUTDIR	:= .
+DIRS	:= .
+SRCS	:= $(foreach d,$(DIRS),$(wildcard $(d)/*$(SUFFIX)))
 PREFIX	:= myProj_
 PROJTAG	:= 0
 
--include $(OUTDIR)/cpptext/Makefile.cpptext
+include $(OUTDIR)/cpptext/Makefile.cpptext
 
 # uncomment the next line for esphome projects
-# -include $(OUTDIR)/cpptext/Makefile.esphome
+# include $(OUTDIR)/cpptext/Makefile.esphome
 
-$(OUTDIR)/cpptext:
-	-@mkdir -p $(OUTDIR)
-	git -C $(OUTDIR) clone git@github.com:maartenSXM/cpptext
-	$(MAKE) --no-print-directory
