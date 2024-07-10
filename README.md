@@ -56,50 +56,67 @@ export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 ```
 and the source your .bashrc before running dehash.sh.
 
-## Makefile
+## makefile and Makefile
 
-Makefile provides a template Makefile that will clone this repo into a project.
-To use it, just copy Makefile into a project directory that does not already
-have a Makefile.  If your project already has a Makefile, you may be
-able to clone this repo and then add the line "include cpptext/Makefile.cpptext"
-into your Makefile however YMMV.
+"makefile" and "Makefile" are functional makefile templates that will clone
+this repo into a project.
+To use them, just copy them both into a project directory that does not
+already use makefiles.  If your project already does, then you likely
+already know how to integrate them to your project.
 
 There is an example in example/make that shows how to use make and cpptext
 to assist with managing multiple project variants that share text files.
-Thet example shows how to sharing of constant #defines and configuration
+That example shows how to share constant #defines and configuration
 #defines between text files and C / C++ files. See the files main.yaml,
 config.h and pins.h in example/make for more details.
 
-## Makefile User variables
+## User variables
 
-These Makefile variables can be changed from their defaults by either
-editting Makefile.cpptext or overriding them with a CLI argument to make such as
+These variables can be changed from their defaults by editting
+"Makefile" or overriding them with a CLI argument to make such as
 ```bash
 make MAIN=init.yaml
 ```
 
 ### OUTDIR
 
-Where to write any intermediate generated files, including the
-cpptext repo itself.
+Where to write generated files, including the cpptext repo itself.
+Unlike the other user variables, it is set in "makefile".
 
 ### MAIN
 
-The initial/main text file that includes the others. it defaults
-to "main.yaml". The suffix of the file is used as the <SUFFIX> for
-teh generated file.
+The initial/main text file that "#include"s the others. It defaults
+to "main.yaml".
+
+### SUFFIX
+
+The suffix of source files that will be dehash-ed so that they can be
+included by <MAIN>.  <MAIN> may not end up including them all however they
+will be dehash-ed regardless.  See user variables DIRS and SRCS. SUFFIX
+defaults to the file suffix of <MAIN>, including the '.'.
+
+### DIRS
+
+The directories that are searched for files ending in <SUFFIX> to dehash. 
+See user variable SRCS. It defaults to ".".
+
+### SRCS
+
+The list of files to dehash.  It defaults *.<SUFFIX> wildcards in
+the directories dpecified by DIRS
 
 ### PREFIX
 
-Makefile.cpptext generates a single esphome yaml filename named $(PREFIX)$(PROJTAG).
+Makefile.cpptext generates a single filename named <PREFIX><PROJTAG>.
 PREFIX defaults to "./myProj_"
 
 ### PROJTAG
 
-Makefile.cpptext a single output file named $(PREFIX)$(PROJTAG).
-PROJTAG defaults to "0" but can be any character string of any length.
-To build different project variants from the same project
-directory, specify a different PROJTAG for each.
+PROJTAG is used to uniquely declar the project name. It defaults to "0"
+but it can be any character string of any length. To build different
+project variants from the same project directory, specify a different
+PROJTAG for each by overriding it on the make command line using, for
+example, make PROJTAG=1.
 
 Argument -D_PROJTAG_$(PROJTAG) is passed to the C-preprocessor so that
 text sources can vary the generated file using #if directives such as:
@@ -107,39 +124,48 @@ text sources can vary the generated file using #if directives such as:
 #if _PROJTAG_foo
 # yaml code only for project foo goes here
 #endif
+Some other C preprocessor defines are passed as well.  They can be
+found by reviewing the CPPDEFS definition in cpptext/Makefile.cpptext.
 ```
 
 ## Generated files
-Makefile.cpptext generates output file <PREFIX><PROJTAG>.<SUFFIX>
-Intermediate C-preprocessed files used to generate <PREFIX><PROJTAG>.<SUFFIX>
-are stored in directory <OUTDIR>/<PREFIX><PROJTAG>/
+Makefile.cpptext generates output file <OUTDIR>/<PREFIX><PROJTAG>.<SUFFIX>
+Intermediate C-preprocessed files used to generate it are stored in
+directory <OUTDIR>/<PREFIX><PROJTAG>/
 
 Both can be deleted using 'make clean'.
 
 ## Other
 
-There are some additional comments describing Makefile features in the
+There are some additional comments describing cpptest features in
 Makefile.
 
-There are some aliases in file Bashrc which may be helpful for issuing
-esphome commands.
+You will note that Makefile.cpptext uses dehash.sh to remove the
+hash-style comments before running the files through the c-preprocessor.
+It leverages a sed script to do that and sets up dehash.sh flags 
+to leave the C preprocessor directives.
 
-Makefile.cpptext uses dehash.sh to remove the hash-style comments
-before running the files through the c-preprocessor.
+There are some aliases in file Bashrc also which may be helpful for
+issuing esphome commands.
+
+There is an optional Makefile.esphome that may be useful to those
+using this project with esphome projects, such as the example project.
+YMMV.
 
 # Credits
 
 Thank you to Landon Rohatensky for the exemplary esphome yaml file
 https://github.com/landonr/lilygo-tdisplays3-esphome used to demonstrate
-espmake configuration, build and also as used in the test subdirectory.
+espmake configuration & build and also as used in the test subdirectory.
 
 # Disclaimers
 
-Tthe author has not attempted to use espmake with Visual Studio.
+The author has not attempted to use cpptext with Visual Studio.
 
 # MacOS Note
 
-Note (repeated intentionally): on MacOS, you need GNU sed to run dehash.sh, which dehash.sh invokes. To install GNU sed, please do this:
+Note (repeated intentionally): on MacOS, you need GNU sed to run dehash.sh,
+which dehash.sh invokes. To install GNU sed, please do this:
 ```
 brew install gsed
 ```

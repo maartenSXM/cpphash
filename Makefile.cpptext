@@ -46,7 +46,7 @@ endif
 
 PROJDIR	:= $(OUTDIR)/$(PREFIX)$(PROJTAG)
 CPPINCS := -I$(PROJDIR) -I.
-CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER)
+CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER) -D _PROJDIR=$(PROJDIR)
 
 DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
 CPP	:= gcc -x c -E -P -undef -Wundef -Werror -nostdinc $(CPPINCS) $(CPPDEFS) 
@@ -55,14 +55,12 @@ _MAIN	:= $(PROJDIR)$(SUFFIX)
 
 # PROJSRCS is the list of dehashed SRCS in PROJDIR
 # filter-out drops builds artifacts in SRCS when, for example, OUTDIR = .
-PROJSRCS:= $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(OUTDIR)/$(PREFIX)*$(SUFFIX)),$(SRCS)))
+PROJSRCS = $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(OUTDIR)/$(PREFIX)*$(SUFFIX)),$(SRCS)))
 
 # _DIRS is all build directories (sort filters duplicates)
 _DIRS	:= $(OUTDIR) $(PROJDIR) $(sort $(dir $(PROJSRCS)))
 
-# generate $(_MAIN) and optionally kickoff a subsequent build
 all: mkdirs $(_MAIN)
-	@echo "$(_MAIN) is up to date"
 	$(PREBUILD)
 	$(BUILD)
 	$(BUILD_MORE)
@@ -76,6 +74,9 @@ $(_MAIN): $(PROJDIR)/$(MAIN) $(PROJSRCS)
 	$(CPP) -MD -MP -MT $@ -MF $<.d $< > $@
 
 $(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
+	$(DEHASH) $< > $@
+
+$(PROJDIR)/%.cpp: %.cpp
 	$(DEHASH) $< > $@
 
 -include $(wildcard $(PROJDIR)/*.d)

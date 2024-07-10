@@ -11,10 +11,10 @@ ifeq (,$(wildcard $(OUTDIR)/cpptext))
         $(error "$(firstword $(MAKEFILE_LIST)): Loop detected. Bailing out.")
     endif
 
-$(OUTDIR)/cpptext: 
-	-@mkdir -p $(OUTDIR)
+all clean realclean: 
+	mkdir -p $(OUTDIR)
 	git -C $(OUTDIR) clone git@github.com:maartenSXM/cpptext
-	$(MAKE) BAIL=1 --no-print-directory
+	$(MAKE) BAIL=1 --no-print-directory $(MAKECMDGOALS)
 else
     include Makefile
 endif

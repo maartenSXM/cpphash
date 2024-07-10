@@ -20,7 +20,10 @@ if [ "$file" == "" ]; then
   file=/dev/stdin
 fi
 
-# The following sed script is based on https://unix.stackexchange.com/questions/383960/sed-stripping-comments-inline/766997#766997
+# The following sed script is based on the code in the comment from anonymous
+# user user218374 found here: 
+#  https://unix.stackexchange.com/questions/383960/sed-stripping-comments-inline/766997
+# Thank you! :-)
 
 # q=quote, Q=doubleQuote, d=dollarSign
 q=\\x27 Q=\\x22 d=\\x24
@@ -34,6 +37,8 @@ double_quotes_open="$Q[^$b$Q]*($B.[^$b$Q]*)*$d"
 double_quoted_word="$Q[^$b$Q]*($B.[^$b$Q]*)*$Q"
 quoted_word="$double_quoted_word|$single_quoted_word"
 
+# This adds or removes code from the sed script by piping it through
+# the C preprocessor based on the flags specified.
 
 echo '
   #ifndef CPP

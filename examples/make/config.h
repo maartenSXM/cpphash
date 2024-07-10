@@ -10,7 +10,7 @@
 #endif // _PROJTAG == 0
  
 // Config specific to specific $USER
-#if _USER_blort
+#ifdef _USER_blort
   #undef CONFIG_HA				// USER blort doesnt use HA
 #endif // _USER_blort
 

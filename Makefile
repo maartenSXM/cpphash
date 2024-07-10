@@ -4,7 +4,7 @@
 #
 # "./makefile" automatically installs cpptext and then includes this file.
 #
-# Note: OUTDIR is specified in the file "./makefile"
+# Note: OUTDIR  is specified in "./makefile" and the default is "."
 
 MAIN	:= main.yaml
 SUFFIX	:= $(suffix $(MAIN))
