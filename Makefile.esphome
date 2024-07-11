@@ -47,12 +47,15 @@ esphomeTgt: $(FIRMWARE)
 
 # skip firmware build if main.cpp is newer than firmware but unchanged
 $(FIRMWARE): $(ESPMAIN)
-	@if cmp --silent $(OLDESP) $(ESPMAIN); then			\
+	@cmp --silent $(OLDESP) $(ESPMAIN);					\
+	if [ $$? -eq 0 ]; then							\
             printf "make: main.cpp unchanged - not building firmware.elf\n";    \
+	    cp -p $(OLDESP) $(ESPMAIN);						\
         else									\
             printf "make: main.cpp changed. Rebuilding firmware.elf\n";		\
 	    printf "platformio run -d $(PIODIR)\n";				\
 	    platformio run -d $(PIODIR);					\
+	    cp -p $(ESPMAIN) $(OLDESP);					        \
 	fi
 
 # Regen if there are updates to local includes, libraries, components, fonts etc
@@ -60,18 +63,21 @@ $(ESPMAIN):: $(ESPDEPS)
 	@printf "$(ESPDEPS)\n"
 	@printf "make: ESPDEPS file changed. Regenerating main.cpp\n"
 	cd $(OUTDIR); esphome compile --only-generate $(OUTFILE)
+	@cp -p $(OUTFILE) $(OLDOUT);
     
 # skip esphome compile if main yaml file is newer than main.cpp but unchanged
 $(ESPMAIN):: $(OUTFILE) 
 	$(BUILD_MORE)
-	@if cmp --silent $(OLDOUT) $(OUTFILE); then				      \
+	@cmp --silent $(OLDOUT) $(OUTFILE);					      \
+	if [ $$? -eq 0 ]; then							      \
             printf "make: yaml unchanged. Not regenerating main.cpp\n";		      \
 	    cp -p $(OLDOUT) $(OUTFILE);						      \
         else									      \
             printf "make: yaml changed. Regenerating main.cpp\n";		      \
-	    if [ -f '$@' ]; then mv $@ $(OLDESP); else touch $(OLDESP); fi; \
+	    if [ -f '$@' ]; then mv $@ $(OLDESP); else touch $(OLDESP); fi;	      \
 	    printf "cd $(OUTDIR); esphome compile --only-generate $(OUTFILE)\n";      \
 	    cd $(OUTDIR); esphome compile --only-generate $(OUTFILE);		      \
+	    cp -p $(OUTFILE) $(OLDOUT);						      \
 	fi
 
 # target "realclean" cleans .esphome from $(OUTDIR)

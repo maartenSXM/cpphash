@@ -101,14 +101,14 @@ realclean: clean $(EXTRA_REALCLEAN_TGT)
 	rm -rf $(PROJDIR) $(REALCLEAN_FILES)
 
 ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
-  $(info make: Makefile.cpptext included.)
+  $(info make: deactivated Makefile.esphome.)
 else
   ifeq (,$(CPPTEXT_NO_ESPHOME))
-    $(info make: Makefile.cpptext and Makefile.esphome both included.)
+    $(info make: activated Makefile.cpptext and Makefile.esphome.)
     include $(OUTDIR)/cpptext/Makefile.esphome
   else
     # exclude Makefile.esphome by defining CPPTEXT_NO_ESPHOME Makefile that includes this
-    $(info make: Makefile.cpptext included, Makefile.esphome excluded.)
+    $(info make: activate Makefile.cpptext included.)
   endif
 endif
 
