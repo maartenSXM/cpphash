@@ -15,6 +15,4 @@ PROJTAG	:= 0
 
 include $(OUTDIR)/cpptext/Makefile.cpptext
 
-# uncomment the next line for esphome projects
-# include $(OUTDIR)/cpptext/Makefile.esphome
 

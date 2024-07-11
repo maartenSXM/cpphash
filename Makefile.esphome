@@ -1,4 +1,4 @@
-# if generating an esphome project, we need to do some extra stuff
+# If generating an esphome project, we need to do some extra stuff
 # mostly because esphome looks for secrets.yaml in the same directory
 # as the esphome yaml file - which might be in $(OUTDIR) and not ".".
 # The clean target is extended to clean that up.
@@ -7,22 +7,16 @@
 # esphome compile.  Finally, the realclean target is extended to cleanup
 # .esphome which gets created during the issued esphome compile.
 
-ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
-  $(error "Please source esphome/venv/bin/activate before running make here.")
-endif
-
 # setup secrets.yaml to be in OUTDIR if needed and then kick-off a build
 BUILD_MORE := -@if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then 	   \
 	    if [ -L "$(OUTDIR)/secrets.yaml" ]; then 			   \
 	    	rm -f $(OUTDIR)/secrets.yaml;				   \
-		echo "re-linking $(OUTDIR)/secrets.yaml";		   \
+		echo "make: re-linking $(OUTDIR)/secrets.yaml";		   \
 	    else							   \
-		echo "linking $(OUTDIR)/secrets.yaml";			   \
+		echo "make: linking $(OUTDIR)/secrets.yaml";		   \
 	    fi;								   \
 	    ln -s $(PREFIX)$(PROJTAG)/secrets.yaml $(OUTDIR)/secrets.yaml; \
-	fi;								   \
-	echo esphome compile $(_MAIN);					   \
-	cd $(OUTDIR); esphome compile $(_MAIN)
+	fi;
 
 # target "clean" cleans up secrets.yaml from $(OUTDIR), if needed
 CLEAN_MORE := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then	\
@@ -32,5 +26,57 @@ CLEAN_MORE := @if [ "$(OUTDIR)" != "." -a -f "secrets.yaml" ]; then	\
 	    fi;								\
 	fi
 
+# we need $(OUTFILE) to continue so we can grok the platform io project name from yaml
+ifeq (,$(wildcard $(OUTFILE)))
+esphomeTgt: mkdirs $(OUTFILE)
+	@$(MAKE) MAIN_TGT=cppTgt BAIL=1 --no-print-directory all
+	@$(MAKE) BAIL=1 --no-print-directory $(MAKECMDGOALS)
+else
+# The project name is extracted from $(OUTFILE) yaml section esphome: / name:
+PIONAME = $(shell sed -n '/esphome:.*/{; :loop n; p; /name:.*/q; b loop}' $(OUTFILE) \
+			| sed 's/\s*name:\s*//' | tr -d \")
+
+PIODIR	    = $(OUTDIR)/.esphome/build/$(PIONAME)
+ELFDIR      = $(PIODIR)/.pio/build/$(PIONAME)
+FIRMWARE    = $(ELFDIR)/firmware.elf
+ESPMAIN     = $(PIODIR)/src/main.cpp
+OLDESP	    = $(PIODIR)/src/.main.cpp.old
+
+esphomeTgt: $(FIRMWARE)
+	@printf "make: $(notdir $<) is up to date.\n"
+
+# skip firmware build if main.cpp is newer than firmware but unchanged
+$(FIRMWARE): $(ESPMAIN)
+	@if cmp --silent $(OLDESP) $(ESPMAIN); then			\
+            printf "make: main.cpp unchanged - not building firmware.elf\n";    \
+        else									\
+            printf "make: main.cpp changed. Rebuilding firmware.elf\n";		\
+	    printf "platformio run -d $(PIODIR)\n";				\
+	    platformio run -d $(PIODIR);					\
+	fi
+
+# Regen if there are updates to local includes, libraries, components, fonts etc
+$(ESPMAIN):: $(ESPDEPS)
+	@printf "$(ESPDEPS)\n"
+	@printf "make: ESPDEPS file changed. Regenerating main.cpp\n"
+	cd $(OUTDIR); esphome compile --only-generate $(OUTFILE)
+    
+# skip esphome compile if main yaml file is newer than main.cpp but unchanged
+$(ESPMAIN):: $(OUTFILE) 
+	$(BUILD_MORE)
+	@if cmp --silent $(OLDOUT) $(OUTFILE); then				      \
+            printf "make: yaml unchanged. Not regenerating main.cpp\n";		      \
+	    cp -p $(OLDOUT) $(OUTFILE);						      \
+        else									      \
+            printf "make: yaml changed. Regenerating main.cpp\n";		      \
+	    if [ -f '$@' ]; then mv $@ $(OLDESP); else touch $(OLDESP); fi; \
+	    printf "cd $(OUTDIR); esphome compile --only-generate $(OUTFILE)\n";      \
+	    cd $(OUTDIR); esphome compile --only-generate $(OUTFILE);		      \
+	fi
+
 # target "realclean" cleans .esphome from $(OUTDIR)
 REALCLEAN_MORE := rm -rf $(OUTDIR)/.esphome 
+
+endif
+
+.PHONY: espDeps esphomeTgt

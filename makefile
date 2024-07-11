@@ -4,6 +4,10 @@
 #
 # This makefile automatically installs cpptext and then includes "./Makefile"
 
+# Disable built-in rules and variables
+MAKEFLAGS += --no-builtin-rules
+MAKEFLAGS += --no-builtin-variables
+
 OUTDIR := .
 
 ifeq (,$(wildcard $(OUTDIR)/cpptext))

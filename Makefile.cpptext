@@ -14,22 +14,26 @@
 # These can be optionally overridden in a project Makefile that
 # includes this Makefile.cpptext file. 
 
-MAIN	:= $(if $(MAIN),$(MAIN),main.yaml)
-SUFFIX	:= $(if $(SUFFIX),$(SUFFIX),$(suffix $(MAIN)))
-OUTDIR	:= $(if $(OUTDIR),$(OUTDIR),.)
-PROJTAG	:= $(if $(PROJTAG),$(PROJTAG),0)
-PREFIX	:= $(if $(PREFIX),$(PREFIX),myProj_)
-SRCS	:= $(if $(SRCS),$(SRCS),$(wildcard *$(SUFFIX)))
-PREBUILD  := $(if $(PREBUILD),$(PREBUILD),@/bin/true)
-BUILD	  := $(if $(BUILD),$(BUILD),@/bin/true)
-POSTBUILD := $(if $(POSTBUILD),$(POSTBUILD),@/bin/true)
+# set some defaults for unset user variables
+MAIN	?= main.yaml
+SUFFIX	?= $(suffix $(MAIN))
+OUTDIR	?= .
+PROJTAG	?= 0
+PREFIX	?= myProj_
+SRCS	?= $(wildcard *$(SUFFIX))
 
-# these are intended to be used by an extra included Makefile
-# template such as Makefile.esphome and not by a project Makefile
+# Use these overrides to specify dependicies that customize the build
+PRE_TGT	 ?= 
+POST_TGT ?= 
+ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
+MAIN_TGT ?= cppTgt
+else
+MAIN_TGT ?= esphomeTgt # from Makefile.esphome
+endif
 
-BUILD_MORE := $(if $(BUILD_MORE),$(BUILD_MORE),@/bin/true)
-CLEAN_MORE := $(if $(CLEAN_MORE),$(CLEAN_MORE),@/bin/true)
-REALCLEAN_MORE := $(if $(REALCLEAN_MORE),$(REALCLEAN_MORE),@/bin/true)
+# Use these to specify dependicies that customize cleaning
+EXTRA_CLEAN_TGT:= $(if $(EXTRA_CLEAN_TGT),$(EXTRA_CLEAN_TGT),)
+EXTRA_REALCLEAN_TGT:= $(if $(EXTRA_REALCLEAN_TGT),$(EXTRA_REALCLEAN_TGT),)
 
 ifeq ($(shell test -e $(MAIN) || echo -n no),no)
   $(error "$(MAIN): file not found.")
@@ -45,47 +49,49 @@ ifeq (,$(findstring GNU,$(shell sed --version)))
 endif
 
 PROJDIR	:= $(OUTDIR)/$(PREFIX)$(PROJTAG)
-CPPINCS := -I$(PROJDIR) -I.
-CPPDEFS := -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER) -D _PROJDIR=$(PROJDIR)
-
 DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
-CPP	:= gcc -x c -E -P -undef -Wundef -Werror -nostdinc $(CPPINCS) $(CPPDEFS) 
-# _MAIN is the generated file (./myProj_0.yaml by default)
-_MAIN	:= $(PROJDIR)$(SUFFIX)
+OUTFILE	:= $(PROJDIR)$(SUFFIX)
+OLDOUT:= $(dir $(OUTFILE))/.$(notdir $(OUTFILE)).old
+
+CPPINCS = -I$(PROJDIR) -I. $(EXTRA_CPPINCS)
+CPPDEFS = -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER) -D _PROJDIR=$(PROJDIR) $(EXTRA_CPPDEFS)
+CPPFLAGS= -x c -E -P -undef -Wundef -Werror -nostdinc $(EXTRA_CPPFLAGS)
+CPP	= gcc $(CPPFLAGS) $(CPPINCS) $(CPPDEFS) 
 
 # PROJSRCS is the list of dehashed SRCS in PROJDIR
 # filter-out drops builds artifacts in SRCS when, for example, OUTDIR = .
 PROJSRCS = $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(OUTDIR)/$(PREFIX)*$(SUFFIX)),$(SRCS)))
 
 # _DIRS is all build directories (sort filters duplicates)
-_DIRS	:= $(OUTDIR) $(PROJDIR) $(sort $(dir $(PROJSRCS)))
+_DIRS	:= $(sort $(dir $(OUTDIR) $(PROJDIR) $(PROJSRCS)))
 
-all: mkdirs $(_MAIN)
-	$(PREBUILD)
-	$(BUILD)
-	$(BUILD_MORE)
-	$(POSTBUILD)
+all: mkdirs $(PRE_TGT) $(MAIN_TGT) $(POST_TGT) 
 
 mkdirs:
-	-mkdir -p $(_DIRS)
+	@mkdir -p $(_DIRS)
 
-$(_MAIN): $(PROJDIR)/$(MAIN) $(PROJSRCS)
-	@echo "Generating $@ from dehashed files in $(PROJDIR)/"
-	$(CPP) -MD -MP -MT $@ -MF $<.d $< > $@
+cppTgt: $(OUTFILE)
+	@echo "$(OUTFILE) is up to date"
+
+$(OUTFILE): $(PROJDIR)/$(MAIN) $(PROJSRCS)
+	@if [ -f '$@' ]; then mv $@ $(OLDOUT); else touch $(OLDOUT); fi
+	@printf "Generating $@ from dehashed files in $(PROJDIR)\n"
+	@$(CPP) -MD -MP -MT $@ -MF $<.d $< > $@
 
 $(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
-	$(DEHASH) $< > $@
+	@printf "Dehashing to $@\n"
+	@$(DEHASH) $< > $@
 
 $(PROJDIR)/%.cpp: %.cpp
-	$(DEHASH) $< > $@
+	@printf "Dehashing to $@\n"
+	@$(DEHASH) $< > $@
 
 -include $(wildcard $(PROJDIR)/*.d)
 
-clean:
-	rm -rf $(PROJDIR) $(_MAIN) $(CLEAN_FILES)
-	$(CLEAN_MORE)
+clean: $(EXTRA_CLEAN_TGT)
+	rm -rf $(PROJDIR) $(OUTFILE) $(OLDOUT) $(CLEAN_FILES)
 
-realclean: clean
+realclean: clean $(EXTRA_REALCLEAN_TGT)
 	-@if [ "`git -C cpptext status --porcelain`" != "" ]; then       \
 		echo "Not removing cpptext since it has been modified."; \
 	else								 \
@@ -93,8 +99,19 @@ realclean: clean
 		rm -rf $(OUTDIR)/cpptext;				 \
 	fi
 	rm -rf $(PROJDIR) $(REALCLEAN_FILES)
-	$(REALCLEAN_MORE)
 
-.PHONY:    clean realclean 
+ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
+  $(info make: Makefile.cpptext included.)
+else
+  ifeq (,$(CPPTEXT_NO_ESPHOME))
+    $(info make: Makefile.cpptext and Makefile.esphome both included.)
+    include $(OUTDIR)/cpptext/Makefile.esphome
+  else
+    # exclude Makefile.esphome by defining CPPTEXT_NO_ESPHOME Makefile that includes this
+    $(info make: Makefile.cpptext included, Makefile.esphome excluded.)
+  endif
+endif
+
+.PHONY:    all clean realclean mkdirs cppTgt $(PRE_TGT) $(MAIN_TGT) $(POST_TGT)
 .PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/cpptext
 

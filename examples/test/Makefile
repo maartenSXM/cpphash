@@ -26,10 +26,10 @@ test all:
 	    printf " OK\n*** test passed ***\n"; 		\
 	    rm -rf $(OUT1) $(OUT2);			        \
     	else 							\
-	    printf "*** Uh oh. Test failed.			\
-	    printf "*** This should result in no output:	\
+	    printf " FAIL\n*** Uh oh. Test failed.\n";		\
+	    printf "*** This should result in no output:\n";	\
 	    printf "\tdiff $(OUT1) $(OUT2)\n";		        \
-	    printf "*** And this be only blank lines and comments:";	\
+	    printf "*** And this be only blank lines and comments:\n";	\
 	    printf "\tdiff $(dir $(Y1))/myProj_0.yaml $(Y2)\n";	\
 	    exit 1; 						\
     	fi
