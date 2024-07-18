@@ -20,7 +20,10 @@ SUFFIX	?= $(suffix $(MAIN))
 OUTDIR	?= .
 PROJTAG	?= 0
 PREFIX	?= myProj_
-SRCS	?= $(wildcard *$(SUFFIX))
+CPT_DIRS?= .
+CPT_SRCS?= $(foreach d,$(CPT_DIRS),$(wildcard $(d)/*$(SUFFIX))) $(CPT_FILES)
+
+PROJNAME:=$(PREFIX)$(PROJTAG)
 
 # Use these overrides to specify dependicies that customize the build
 PRE_TGT	 ?= 
@@ -48,7 +51,7 @@ ifeq (,$(findstring GNU,$(shell sed --version)))
   $(error "GNU sed not found. Please install it")
 endif
 
-PROJDIR	:= $(OUTDIR)/$(PREFIX)$(PROJTAG)
+PROJDIR	:= $(OUTDIR)/$(PROJNAME)
 DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
 OUTFILE	:= $(PROJDIR)$(SUFFIX)
 OLDOUT:= $(dir $(OUTFILE))/.$(notdir $(OUTFILE)).old
@@ -58,25 +61,25 @@ CPPDEFS = -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D 
 CPPFLAGS= -x c -E -P -undef -Wundef -Werror -nostdinc $(EXTRA_CPPFLAGS)
 CPP	= gcc $(CPPFLAGS) $(CPPINCS) $(CPPDEFS) 
 
-# PROJSRCS is the list of dehashed SRCS in PROJDIR
-# filter-out drops builds artifacts in SRCS when, for example, OUTDIR = .
-PROJSRCS = $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(OUTDIR)/$(PREFIX)*$(SUFFIX)),$(SRCS)))
+# PROJSRCS is the list of dehashed CPT_SRCS in PROJDIR
+# filter-out drops builds artifacts in CPT_SRCS when, for example, OUTDIR = .
+PROJSRCS = $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(OUTDIR)/$(PREFIX)*$(SUFFIX)),$(CPT_SRCS)))
 
 # _DIRS is all build directories (sort filters duplicates)
 _DIRS	:= $(sort $(dir $(OUTDIR) $(PROJDIR) $(PROJSRCS)))
 
-all: mkdirs $(PRE_TGT) $(MAIN_TGT) $(POST_TGT) 
+$(shell mkdir -p $(_DIRS))
 
-mkdirs:
-	@mkdir -p $(_DIRS)
+all: $(PRE_TGT) $(MAIN_TGT) $(POST_TGT) 
 
 cppTgt: $(OUTFILE)
 	@echo "$(OUTFILE) is up to date"
 
 $(OUTFILE): $(PROJDIR)/$(MAIN) $(PROJSRCS)
 	@if [ -f '$@' ]; then mv $@ $(OLDOUT); else touch $(OLDOUT); fi
+	@printf "project srcs are $(PROJSRCS)"
 	@printf "Generating $@ from dehashed files in $(PROJDIR)\n"
-	@$(CPP) -MD -MP -MT $@ -MF $<.d $< > $@
+	$(CPP) -MD -MP -MT $@ -MF $<.d $< -o $@
 
 $(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
 	@printf "Dehashing to $@\n"
@@ -101,14 +104,14 @@ realclean: clean $(EXTRA_REALCLEAN_TGT)
 	rm -rf $(PROJDIR) $(REALCLEAN_FILES)
 
 ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
-  $(info make: deactivated Makefile.esphome.)
+  $(info Makefile.cpptext: deactivated Makefile.esphome.)
 else
   ifeq (,$(CPPTEXT_NO_ESPHOME))
-    $(info make: activated Makefile.cpptext and Makefile.esphome.)
+    $(info Makefile.cpptext: activated Makefile.cpptext and Makefile.esphome.)
     include $(OUTDIR)/cpptext/Makefile.esphome
   else
     # exclude Makefile.esphome by defining CPPTEXT_NO_ESPHOME Makefile that includes this
-    $(info make: activate Makefile.cpptext included.)
+    $(info Makefile.cpptext: activate Makefile.cpptext included.)
   endif
 endif
 
