@@ -1,7 +1,7 @@
 # Makefile.cpptext is from https://github.com/maartenSXM/cpptext.
 #
 # This file is intended to be included from your project Makefile and
-# depends on $(OUTDIR)/cpptext being a git clone of
+# depends on $(CPT_OUTDIR)/cpptext being a git clone of
 # https://github.com/maartenSXM/cpptext.
 #
 # See https://github.com/maartenSXM/cpptext/blob/main/Makefile for
@@ -15,106 +15,116 @@
 # includes this Makefile.cpptext file. 
 
 # set some defaults for unset user variables
-MAIN	?= main.yaml
-SUFFIX	?= $(suffix $(MAIN))
-OUTDIR	?= .
-PROJTAG	?= 0
-PREFIX	?= myProj_
-CPT_DIRS?= .
-CPT_SRCS?= $(foreach d,$(CPT_DIRS),$(wildcard $(d)/*$(SUFFIX))) $(CPT_FILES)
+CPT_MAIN    ?= main.yaml
+CPT_SUFFIX  ?= $(suffix $(CPT_MAIN))
+CPT_OUTDIR  ?= .
+CPT_PROJTAG ?= 0
+CPT_PREFIX  ?= myProj_
+CPT_DIRS    ?= .
+CPT_SRCS    ?= $(foreach d,$(CPT_DIRS),	\
+	       $(wildcard $(d)/*$(CPT_SUFFIX))) $(CPT_FILES)
 
-PROJNAME:=$(PREFIX)$(PROJTAG)
+CPT_PROJNAME:=$(CPT_PREFIX)$(CPT_PROJTAG)
 
 # Use these overrides to specify dependicies that customize the build
-PRE_TGT	 ?= 
-POST_TGT ?= 
+CPT_PRE_TGT  ?= 
+CPT_POST_TGT ?= 
 ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
-MAIN_TGT ?= cppTgt
+CPT_MAIN_TGT ?= cppTgt
 else
-MAIN_TGT ?= esphomeTgt # from Makefile.esphome
+CPT_MAIN_TGT ?= esphomeTgt # from Makefile.esphome
 endif
 
 # Use these to specify dependicies that customize cleaning
-EXTRA_CLEAN_TGT:= $(if $(EXTRA_CLEAN_TGT),$(EXTRA_CLEAN_TGT),)
-EXTRA_REALCLEAN_TGT:= $(if $(EXTRA_REALCLEAN_TGT),$(EXTRA_REALCLEAN_TGT),)
+CPT_EXTRA_CLEAN_TGT:= $(if $(CPT_EXTRA_CLEAN_TGT),$(CPT_EXTRA_CLEAN_TGT),)
+CPT_EXTRA_REALCLEAN_TGT:= $(if $(CPT_EXTRA_REALCLEAN_TGT),$(CPT_EXTRA_REALCLEAN_TGT),)
 
-ifeq ($(shell test -e $(MAIN) || echo -n no),no)
-  $(error "$(MAIN): file not found.")
+ifeq ($(shell test -e $(CPT_MAIN) || echo -n no),no)
+  $(error "$(CPT_MAIN): file not found.")
 endif
-ifeq ($(shell test -e $(OUTDIR) || echo -n no),no)
-  $(error "$(OUTDIR): file not found.")
+
+ifeq ($(shell test -e $(CPT_OUTDIR) || echo -n no),no)
+  $(error "$(CPT_OUTDIR): file not found.")
 endif
+
 ifeq ($(shell which gcc),)
   $(error "gcc: not found. Please install it")
 endif
+
 ifeq (,$(findstring GNU,$(shell sed --version)))
   $(error "GNU sed not found. Please install it")
 endif
 
-PROJDIR	:= $(OUTDIR)/$(PROJNAME)
-DEHASH	:= $(OUTDIR)/cpptext/dehash.sh --cpp
-OUTFILE	:= $(PROJDIR)$(SUFFIX)
-OLDOUT:= $(dir $(OUTFILE))/.$(notdir $(OUTFILE)).old
+CPT_PROJDIR := $(CPT_OUTDIR)/$(CPT_PROJNAME)
+CPT_DEHASH  := $(CPT_OUTDIR)/cpptext/dehash.sh --cpp
+CPT_OUTFILE := $(CPT_PROJDIR)$(CPT_SUFFIX)
+CPT_OLDOUT  := $(dir $(CPT_OUTFILE))/.$(notdir $(CPT_OUTFILE)).old
 
-CPPINCS = -I$(PROJDIR) -I. $(EXTRA_CPPINCS)
-CPPDEFS = -D _PROJTAG_$(PROJTAG)=1 -D _USER_$(USER)=1 -D _PROJTAG=$(PROJTAG) -D _USER=$(USER) -D _PROJDIR=$(PROJDIR) $(EXTRA_CPPDEFS)
-CPPFLAGS= -x c -E -P -undef -Wundef -Werror -nostdinc $(EXTRA_CPPFLAGS)
-CPP	= gcc $(CPPFLAGS) $(CPPINCS) $(CPPDEFS) 
+CPT_CPPFLAGS = -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_CPPFLAGS)
+CPT_CPPINCS  = -I$(CPT_PROJDIR) -I. $(CPT_EXTRA_CPPINCS)
+CPT_CPPDEFS  = -D _CPT_PROJTAG_$(CPT_PROJTAG)=1	\
+	       -D _USER_$(USER)=1		\
+	       -D _CPT_PROJTAG=$(CPT_PROJTAG)	\
+	       -D _USER=$(USER)			\
+	       -D _CPT_PROJDIR=$(CPT_PROJDIR)	\
+		$(CPT_EXTRA_CPPDEFS)
+CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
 
-# PROJSRCS is the list of dehashed CPT_SRCS in PROJDIR
-# filter-out drops builds artifacts in CPT_SRCS when, for example, OUTDIR = .
-PROJSRCS = $(addprefix $(PROJDIR)/,$(filter-out $(wildcard $(OUTDIR)/$(PREFIX)*$(SUFFIX)),$(CPT_SRCS)))
+# CPT_PROJSRCS is the list of dehashed CPT_SRCS in CPT_PROJDIR
+# filter-out drops builds artifacts in CPT_SRCS when, for example, CPT_OUTDIR = .
+CPT_PROJSRCS = $(addprefix $(CPT_PROJDIR)/,$(filter-out $(wildcard $(CPT_OUTDIR)/$(CPT_PREFIX)*$(CPT_SUFFIX)),$(CPT_SRCS)))
 
 # _DIRS is all build directories (sort filters duplicates)
-_DIRS	:= $(sort $(dir $(OUTDIR) $(PROJDIR) $(PROJSRCS)))
+CPT_MKDIRS := $(sort $(dir $(CPT_OUTDIR) $(CPT_PROJDIR) $(CPT_PROJSRCS)))
 
-$(shell mkdir -p $(_DIRS))
+$(shell mkdir -p $(CPT_MKDIRS))
 
-all: $(PRE_TGT) $(MAIN_TGT) $(POST_TGT) 
+all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
-cppTgt: $(OUTFILE)
-	@echo "$(OUTFILE) is up to date"
+cppTgt: $(CPT_OUTFILE)
+	@echo "$(CPT_OUTFILE) is up to date"
 
-$(OUTFILE): $(PROJDIR)/$(MAIN) $(PROJSRCS)
-	@if [ -f '$@' ]; then mv $@ $(OLDOUT); else touch $(OLDOUT); fi
-	@printf "project srcs are $(PROJSRCS)"
-	@printf "Generating $@ from dehashed files in $(PROJDIR)\n"
-	$(CPP) -MD -MP -MT $@ -MF $<.d $< -o $@
+$(CPT_OUTFILE): $(CPT_PROJDIR)/$(CPT_MAIN) $(CPT_PROJSRCS)
+	@if [ -f '$@' ]; then mv $@ $(CPT_OLDOUT); else touch $(CPT_OLDOUT); fi
+	@printf "Generating $@ from dehashed files in $(CPT_PROJDIR)\n"
+	$(CPT_CPP) -MD -MP -MT $@ -MF $<.d $< -o $@
 
-$(PROJDIR)/%$(SUFFIX): %$(SUFFIX)
+$(CPT_PROJDIR)/%$(CPT_SUFFIX): %$(CPT_SUFFIX)
 	@printf "Dehashing to $@\n"
-	@$(DEHASH) $< > $@
+	@$(CPT_DEHASH) $< > $@
 
-$(PROJDIR)/%.cpp: %.cpp
+$(CPT_PROJDIR)/%.cpp: %.cpp
 	@printf "Dehashing to $@\n"
-	@$(DEHASH) $< > $@
+	@$(CPT_DEHASH) $< > $@
 
--include $(wildcard $(PROJDIR)/*.d)
+-include $(wildcard $(CPT_PROJDIR)/*.d)
 
-clean: $(EXTRA_CLEAN_TGT)
-	rm -rf $(PROJDIR) $(OUTFILE) $(OLDOUT) $(CLEAN_FILES)
+clean: $(CPT_EXTRA_CLEAN_TGT)
+	rm -rf $(CPT_PROJDIR) $(CPT_OUTFILE) $(CPT_OLDOUT) $(CPT_CLEAN_FILES)
+	$(CPT_CLEAN_MORE)
 
-realclean: clean $(EXTRA_REALCLEAN_TGT)
+realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
 	-@if [ "`git -C cpptext status --porcelain`" != "" ]; then       \
 		echo "Not removing cpptext since it has been modified."; \
 	else								 \
-		echo "rm -rf $(OUTDIR)/cpptext";			 \
-		rm -rf $(OUTDIR)/cpptext;				 \
+		echo "rm -rf $(CPT_OUTDIR)/cpptext";			 \
+		rm -rf $(CPT_OUTDIR)/cpptext;				 \
 	fi
-	rm -rf $(PROJDIR) $(REALCLEAN_FILES)
+	rm -rf $(CPT_PROJDIR) $(CPT_REALCLEAN_FILES)
+	$(CPT_REALCLEAN_MORE)
 
 ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
   $(info Makefile.cpptext: deactivated Makefile.esphome.)
 else
-  ifeq (,$(CPPTEXT_NO_ESPHOME))
+  ifeq (,$(CPT_NO_ESPHOME))
     $(info Makefile.cpptext: activated Makefile.cpptext and Makefile.esphome.)
-    include $(OUTDIR)/cpptext/Makefile.esphome
+    include $(CPT_OUTDIR)/cpptext/Makefile.esphome
   else
-    # exclude Makefile.esphome by defining CPPTEXT_NO_ESPHOME Makefile that includes this
+    # exclude Makefile.esphome by defining CPT_NO_ESPHOME Makefile that includes this
     $(info Makefile.cpptext: activate Makefile.cpptext included.)
   endif
 endif
 
-.PHONY:    all clean realclean mkdirs cppTgt $(PRE_TGT) $(MAIN_TGT) $(POST_TGT)
-.PRECIOUS: $(PROJDIR) $(OUTDIR) $(OUTDIR)/cpptext
+.PHONY:    all clean realclean mkdirs cppTgt $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT)
+.PRECIOUS: $(CPT_PROJDIR) $(CPT_OUTDIR) $(CPT_OUTDIR)/cpptext
 

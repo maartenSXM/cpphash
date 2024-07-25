@@ -6,7 +6,7 @@ while [[ $# > 0 ]]
 do
   case $1 in
     -c|--cpp)	GCCFLAGS="$GCCFLAGS -DCPP"; shift;;
-    -o|--output) shift 2;;  # deprecated
+    -o|--out)	outfile="$2"; shift 2;;
     -b|--blank)	GCCFLAGS="$GCCFLAGS -DBLANK"; shift;; 
     -h|--help)	echo -e "$HELP"; shift;; 
     *) break
@@ -18,6 +18,14 @@ GCC="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror -"
 file="$1"
 if [ "$file" == "" ]; then
   file=/dev/stdin
+fi
+
+if [ "$outfile" == "" ]; then
+  outfile=/dev/stdout
+else
+  if [ "$outfile" == "-" ]; then
+    outfile=/dev/stdout
+  fi
 fi
 
 # The following sed script is based on the code in the comment from anonymous
@@ -48,8 +56,15 @@ echo '
     # // else change it to __SHEBANG__ and caller must change it back
     # // later with, for example this sed: 1 {s,^__SHEBANG__,#!}
     1 {s,^#!,__SHEBANG__,}
+    # // concatenate lines ending in backslash for further processing below
+    # // this will handle multiline comments or cpp directives 
+    :x; /\\\s*$/ { N; s/\\\n//; tx }
+    # // map #default <a> <b> to #ifndef a \n #define <a> <b> \n #endif \n
+    {s/^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$/#ifndef \1\n#define \1 \2\n#endif/}
+    # // map #default <a> to #ifndef a \n #define <a> \n #endif \n
+    {s/^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$/#ifndef \1\n#define \1\n#endif/}
     # // keep cpp directive lines (b=branch next line)
-    /^\s*#\s*\(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning\)/b
+    /^\s*#\s*(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning)/b
   #endif // CPP
   #
   # // delete lines starting with #
@@ -69,6 +84,6 @@ echo '
     # // delete blank lines
     /\S/!d
   #endif // !BLANK
-' | $GCC $GCCFLAGS | sed -E -f - $file
+' | $GCC $GCCFLAGS | sed -E -r -f - $file > "$outfile"
 
 exit $?

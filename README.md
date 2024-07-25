@@ -30,6 +30,7 @@ dehash.sh [-c] [-b] [-h] filename
 -c|--cpp	keep CPP directives
 -b|--blank	keep blank lines
 -h|--help	help
+-o|--out <file>	file to write output to, else stdout
 filename	file to dehash to stout or - for stdin
 ```
 
