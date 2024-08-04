@@ -1,75 +1,95 @@
 # If generating an esphome project, we need to do some extra stuff
 # mostly because esphome looks for secrets.yaml in the same directory
-# as the esphome yaml file - which might be in $(CPT_OUTDIR) and not ".".
+# as the esphome yaml file - which might be in $(CPT_BUILD) and not ".".
 # The clean target is extended to clean that up.
 #
 # Also, after generating the esphome yaml, it is handy to kick off the
-# esphome compile.  Finally, the realclean target is extended to cleanup
+# esphome compile. Finally, the realclean target is extended to cleanup
 # .esphome which gets created during the issued esphome compile.
 
-# setup secrets.yaml to be in CPT_OUTDIR if needed
-CPT_ESP_BUILD_MORE:= -@if [ "$(CPT_OUTDIR)" != "." -a -f "secrets.yaml" ]; then\
-	    if [ -L "$(CPT_OUTDIR)/secrets.yaml" ]; then 		     \
-	    	rm -f $(CPT_OUTDIR)/secrets.yaml;			     \
-		echo "Makefile.esphome: re-linking $(CPT_OUTDIR)/secrets.yaml";\
-	    else							     \
-		echo "Makefile.esphome: linking $(CPT_OUTDIR)/secrets.yaml"; \
-	    fi;								     \
-	    ln -s secrets.yaml $(CPT_OUTDIR)/secrets.yaml;		     \
-	fi;
+ifeq ($(shell which yq),)
+$(error "yq not found. Please install it")
+endif
+
+define CPT_CPP_MORE
+	@printf "Makefile.esphome: Merging "
+	@echo -n $$(grep '^\S' $(CPT_OUTFILE) | wc -l)
+	@printf " component definitions\n"
+	@awk '							    \
+	    /^[^[:space:]]/{close(F);F=FILENAME"."NR;print $$0>F};  \
+	    /^[[:space:]]/{print $$0>F}				    \
+	' $(CPT_OUTFILE)
+	@yq eval-all '. as $$item ireduce ({}; . *+ $$item)'	    \
+		$(CPT_OUTFILE).* > $(CPT_OUTFILE)
+	@rm $(CPT_OUTFILE).*
+endef
+
+# setup secrets.yaml to be in CPT_BUILD if needed
+CPT_ESP_BUILD_MORE:= -@						    \
+if [ "$(CPT_BUILD)" != "." -a -f "secrets.yaml" ]; then		    \
+  if [ -L "$(CPT_BUILD)/secrets.yaml" ]; then			    \
+    rm -f $(CPT_BUILD)/secrets.yaml;				    \
+    echo "Makefile.esphome: re-linking $(CPT_BUILD)/secrets.yaml";  \
+  else								    \
+    echo "Makefile.esphome: linking $(CPT_BUILD)/secrets.yaml";	    \
+  fi;								    \
+    ln -s secrets.yaml $(CPT_BUILD)/secrets.yaml;		    \
+fi
 
 # setup Makefile.cpptext target "clean" to remove secrets.yaml if needed
-CPT_CLEAN_MORE := @if [ "$(CPT_OUTDIR)" != "." -a -f "secrets.yaml" ]; then \
-	    if [ -L "$(CPT_OUTDIR)/secrets.yaml" ]; then		    \
-	    	echo "rm $(CPT_OUTDIR)/secrets.yaml";			    \
-	    	rm -f $(CPT_OUTDIR)/secrets.yaml;			    \
-	    fi;								    \
-	fi
+CPT_CLEAN_MORE := @					\
+if [ "$(CPT_BUILD)" != "." -a -f "secrets.yaml" ]; then \
+  if [ -L "$(CPT_BUILD)/secrets.yaml" ]; then		\
+    echo "rm $(CPT_BUILD)/secrets.yaml";		\
+    rm -f $(CPT_BUILD)/secrets.yaml;			\
+  fi;							\
+fi
 
-# $(CPT_OUTFILE) must exist so the pio project name can be parsed from it.
-# if it doesn't exist, it gets generated here and make command restarted.
+# $(CPT_OUTFILE) must exist so the pio project name can be parsed from it
+# since it is defined in yaml. If it doesnt exist, it gets generated here
+# and the make command restarted.
 ifeq (,$(wildcard $(CPT_OUTFILE)))
 esphomeTgt: $(CPT_OUTFILE)
-	@$(MAKE) -f Makefile CPT_OUTDIR=$(CPT_OUTDIR) CPT_MAIN_TGT=cppTgt --no-print-directory $(CPT_OUTFILE)
-	@$(MAKE) -f Makefile CPT_OUTDIR=$(CPT_OUTDIR) --no-print-directory $(MAKECMDGOALS)
+	@$(MAKE) -f Makefile CPT_BUILD=$(CPT_BUILD) CPT_MAIN_TGT=cppTgt --no-print-directory $(CPT_OUTFILE)
+	@$(MAKE) -f Makefile CPT_BUILD=$(CPT_BUILD) --no-print-directory $(MAKECMDGOALS)
 else
-# The project name is extracted from $(CPT_OUTFILE) yaml section esphome: / name:
-CPT_ESP_PIONAME = $(shell						    \
-    sed -n '/esphome:.*/{; :loop n; p; /name:.*/q; b loop}' $(CPT_OUTFILE)  \
-    | sed 's/\s*name:\s*//' | tr -d \")
+# extract the platformio project name from the generated yaml 
+CPT_ESP_PIONAME	  = $(shell yq -r .esphome.name $(CPT_OUTFILE))
+CPT_ESP_DIR	  = $(CPT_BUILD)
+CPT_ESP_PIOSUBDIR = .esphome/build/$(CPT_ESP_PIONAME)
+CPT_ESP_PIODIR	  = $(CPT_BUILD)/$(CPT_ESP_PIOSUBDIR)
+CPT_ESP_ELFDIR    = $(CPT_ESP_PIODIR)/.pio/build/$(CPT_ESP_PIONAME)
+CPT_ESP_FIRMWARE  = $(CPT_ESP_ELFDIR)/firmware.elf
+CPT_ESP_MAIN	  = $(CPT_ESP_PIODIR)/src/main.cpp
+CPT_ESP_OLDESP	  = $(CPT_ESP_PIODIR)/src/.main.cpp.old
+CPT_ESP_GEN	 ?= esphome compile --only-generate
+CPT_ESP_DEPS	 ?= $(CPT_HOME)/Makefile.esphome	\
+$(foreach d,$(CPT_ESP_DIRS),				\
+  $(wildcard $(d)/*.c)					\
+  $(wildcard $(d)/*.cpp)				\
+  $(wildcard $(d)/*.h)					\
+)
 
-CPT_ESP_PIODIR	    = $(CPT_OUTDIR)/.esphome/build/$(CPT_ESP_PIONAME)
-CPT_ESP_ELFDIR      = $(CPT_ESP_PIODIR)/.pio/build/$(CPT_ESP_PIONAME)
-CPT_ESP_FIRMWARE    = $(CPT_ESP_ELFDIR)/firmware.elf
-CPT_ESP_MAIN	    = $(CPT_ESP_PIODIR)/src/main.cpp
-CPT_ESP_OLDESP	    = $(CPT_ESP_PIODIR)/src/.main.cpp.old
-
-CPT_ESP_DEPS ?= $(foreach d,$(CPT_ESP_DIRS),	\
-		$(wildcard $(d)/*.c)		\
-		$(wildcard $(d)/*.cpp)		\
-		$(wildcard $(d)/*.h)		\
-		)
-
-esphomeTgt: $(CPT_ESP_FIRMWARE)
-	@printf "Makefile.esphome: $(CPT_ESP_PIONAME) $(notdir $<) is up to date.\n"
+esphomeTgt: cppTgt $(CPT_ESP_FIRMWARE)
+	@printf "Makefile.esphome: $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
 
 # skip firmware build if main.cpp is newer than firmware but unchanged
 $(CPT_ESP_FIRMWARE): $(CPT_ESP_MAIN)
-	@cmp --silent $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);		\
-	if [ $$? -eq 0 ]; then						\
+	@cmp --silent $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);	\
+	if [ $$? -eq 0 ]; then					\
             printf "Makefile.esphome: main.cpp unchanged - not building firmware.elf\n";								\
-	    cp -p $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);			\
-        else								\
-            printf "Makefile.esphome: main.cpp changed. Rebuilding firmware.elf\n";									\
-	    printf "platformio run -d $(CPT_ESP_PIODIR)\n";		\
-	    platformio run -d $(CPT_ESP_PIODIR);			\
-	    cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP);		        \
+	    cp -p $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);		\
+        else							\
+            printf "Makefile.esphome: main.cpp changed. Rebuilding firmware.elf\n"; \
+	    printf "cd $(CPT_ESP_DIR); pio run -d $(CPT_ESP_PIOSUBDIR)\n";	    \
+	    cd $(CPT_ESP_DIR); pio run -d $(CPT_ESP_PIOSUBDIR); cd -;		    \
+	    cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP);		\
 	fi
 
 # Regen if there are updates to local includes, libraries, components, fonts etc
 $(CPT_ESP_MAIN):: $(CPT_ESP_DEPS)
-	@printf "Makefile.esphome: Regen-ing main.cpp due to CPT_ESP_DEPS\n"
-	cd $(CPT_OUTDIR); esphome compile --only-generate $(CPT_OUTFILE)
+	@printf "Makefile.esphome: Dependency changed. Regen-ing main.cpp\n"
+	cd $(dir $(CPT_OUTFILE)) && $(CPT_ESP_GEN) $(notdir $(CPT_OUTFILE))
 	@cp -p $(CPT_OUTFILE) $(CPT_OLDOUT);
     
 # skip esphome compile if main yaml file is newer than main.cpp but unchanged
@@ -77,18 +97,23 @@ $(CPT_ESP_MAIN):: $(CPT_OUTFILE)
 	$(CPT_ESP_BUILD_MORE)
 	@cmp --silent $(CPT_OLDOUT) $(CPT_OUTFILE);		    \
 	if [ $$? -eq 0 ]; then					    \
-            printf "Makefile.esphome: yaml unchanged. Not regenerating main.cpp\n";								    \
+            printf "Makefile.esphome: yaml unchanged. Not regenerating main.cpp\n"; \
 	    cp -p $(CPT_OLDOUT) $(CPT_OUTFILE);			    \
         else							    \
             printf "Makefile.esphome: yaml changed. Regenerating main.cpp\n"; \
-	    if [ -f '$@' ]; then mv $@ $(CPT_ESP_OLDESP); else touch $(CPT_ESP_OLDESP); fi;							    \
-	    printf "cd $(CPT_OUTDIR); esphome compile --only-generate $(CPT_OUTFILE)\n";							    \
-	    cd $(CPT_OUTDIR); esphome compile --only-generate $(CPT_OUTFILE); \
+	    if [ -f '$@' ]; then				    \
+		mv $@ $(CPT_ESP_OLDESP);			    \
+	    else						    \
+		touch $(CPT_ESP_OLDESP);			    \
+	    fi;							    \
+	    printf "cd $(dir $(CPT_OUTFILE));"			    \
+	    printf "$(CPT_ESP_GEN) $(notdir $(CPT_OUTFILE))\n";	    \
+	    cd $(dir $(CPT_OUTFILE)); $(CPT_ESP_GEN) $(notdir $(CPT_OUTFILE)); cd -;\
 	    cp -p $(CPT_OUTFILE) $(CPT_OLDOUT);			    \
 	fi
 
-# target "realclean" cleans .esphome from $(CPT_OUTDIR)
-CPT_REALCLEAN_MORE := rm -rf $(CPT_OUTDIR)/.esphome 
+# target "realclean" cleans .esphome from $(CPT_BUILD)
+CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD)/.esphome 
 
 endif
 

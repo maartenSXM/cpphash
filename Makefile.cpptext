@@ -1,8 +1,7 @@
 # Makefile.cpptext is from https://github.com/maartenSXM/cpptext.
 #
 # This file is intended to be included from your project Makefile and
-# depends on $(CPT_OUTDIR)/cpptext being a git clone of
-# https://github.com/maartenSXM/cpptext.
+# depends on $(CPT_HOME) being a git clone of github.com/maartenSXM/cpptext.
 #
 # See https://github.com/maartenSXM/cpptext/blob/main/Makefile for
 # an example of how to automatically clone this repo and include this file
@@ -17,12 +16,13 @@
 # set some defaults for unset user variables
 CPT_MAIN    ?= main.yaml
 CPT_SUFFIX  ?= $(suffix $(CPT_MAIN))
-CPT_OUTDIR  ?= .
+CPT_HOME    ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+CPT_BUILD   ?= .
 CPT_PROJTAG ?= 0
 CPT_PREFIX  ?= myProj_
 CPT_DIRS    ?= .
 CPT_SRCS    ?= $(foreach d,$(CPT_DIRS),	\
-	       $(wildcard $(d)/*$(CPT_SUFFIX))) $(CPT_FILES)
+	       $(patsubst ./%,%,$(wildcard $(d)/*$(CPT_SUFFIX))) $(CPT_FILES))
 
 CPT_PROJNAME:=$(CPT_PREFIX)$(CPT_PROJTAG)
 
@@ -43,22 +43,18 @@ ifeq ($(shell test -e $(CPT_MAIN) || echo -n no),no)
   $(error "$(CPT_MAIN): file not found.")
 endif
 
-ifeq ($(shell test -e $(CPT_OUTDIR) || echo -n no),no)
-  $(error "$(CPT_OUTDIR): file not found.")
-endif
-
 ifeq ($(shell which gcc),)
-  $(error "gcc: not found. Please install it")
+  $(error "gcc not found. Please install it")
 endif
 
 ifeq (,$(findstring GNU,$(shell sed --version)))
   $(error "GNU sed not found. Please install it")
 endif
 
-CPT_PROJDIR := $(CPT_OUTDIR)/$(CPT_PROJNAME)
-CPT_DEHASH  := $(CPT_OUTDIR)/cpptext/dehash.sh --cpp
+CPT_PROJDIR := $(CPT_BUILD)/$(CPT_PROJNAME)
+CPT_DEHASH  := $(CPT_HOME)/dehash.sh --cpp
 CPT_OUTFILE := $(CPT_PROJDIR)$(CPT_SUFFIX)
-CPT_OLDOUT  := $(dir $(CPT_OUTFILE))/.$(notdir $(CPT_OUTFILE)).old
+CPT_OLDOUT  := $(dir $(CPT_OUTFILE)).$(notdir $(CPT_OUTFILE)).old
 
 CPT_CPPFLAGS = -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_CPPFLAGS)
 CPT_CPPINCS  = -I$(CPT_PROJDIR) -I. $(CPT_EXTRA_CPPINCS)
@@ -71,29 +67,30 @@ CPT_CPPDEFS  = -D _CPT_PROJTAG_$(CPT_PROJTAG)=1	\
 CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
 
 # CPT_PROJSRCS is the list of dehashed CPT_SRCS in CPT_PROJDIR
-# filter-out drops builds artifacts in CPT_SRCS when, for example, CPT_OUTDIR = .
-CPT_PROJSRCS = $(addprefix $(CPT_PROJDIR)/,$(filter-out $(wildcard $(CPT_OUTDIR)/$(CPT_PREFIX)*$(CPT_SUFFIX)),$(CPT_SRCS)))
+# filter-out drops builds artifacts in CPT_SRCS when, for example, CPT_BUILD = .
+CPT_PROJSRCS = $(addprefix $(CPT_PROJDIR)/,$(filter-out $(wildcard $(CPT_BUILD)/$(CPT_PREFIX)*$(CPT_SUFFIX)),$(CPT_SRCS)))
 
 # _DIRS is all build directories (sort filters duplicates)
-CPT_MKDIRS := $(sort $(dir $(CPT_OUTDIR) $(CPT_PROJDIR) $(CPT_PROJSRCS)))
+CPT_MKDIRS := $(sort $(dir $(CPT_BUILD) $(CPT_PROJDIR) $(CPT_PROJSRCS)))
 
 $(shell mkdir -p $(CPT_MKDIRS))
 
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
 cppTgt: $(CPT_OUTFILE)
-	@echo "$(CPT_OUTFILE) is up to date"
+	@printf "$(CPT_OUTFILE) is up to date\n"
 
+# @printf "Generating $@ from dehashed files in $(CPT_PROJDIR)\n"
 $(CPT_OUTFILE): $(CPT_PROJDIR)/$(CPT_MAIN) $(CPT_PROJSRCS)
 	@if [ -f '$@' ]; then mv $@ $(CPT_OLDOUT); else touch $(CPT_OLDOUT); fi
-	@printf "Generating $@ from dehashed files in $(CPT_PROJDIR)\n"
 	$(CPT_CPP) -MD -MP -MT $@ -MF $<.d $< -o $@
+	$(CPT_CPP_MORE)
 
-$(CPT_PROJDIR)/%$(CPT_SUFFIX): %$(CPT_SUFFIX)
+$(CPT_PROJDIR)/%$(CPT_SUFFIX): %$(CPT_SUFFIX) $(CPT_CPP_MAKEFILE)
 	@printf "Dehashing to $@\n"
 	@$(CPT_DEHASH) $< > $@
 
-$(CPT_PROJDIR)/%.cpp: %.cpp
+$(CPT_PROJDIR)/%.cpt: %.cpt $(CPT_CPP_MAKEFILE)
 	@printf "Dehashing to $@\n"
 	@$(CPT_DEHASH) $< > $@
 
@@ -104,11 +101,11 @@ clean: $(CPT_EXTRA_CLEAN_TGT)
 	$(CPT_CLEAN_MORE)
 
 realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
-	-@if [ "`git -C cpptext status --porcelain`" != "" ]; then       \
-		echo "Not removing cpptext since it has been modified."; \
-	else								 \
-		echo "rm -rf $(CPT_OUTDIR)/cpptext";			 \
-		rm -rf $(CPT_OUTDIR)/cpptext;				 \
+	-@if [ "`git -C $(CPT_HOME) status --porcelain`" != "" ]; then		 \
+		printf "Not removing $(CPT_HOME) since it has been modified.\n"; \
+	else									 \
+		printf "rm -rf $(CPT_HOME)\n";					 \
+		rm -rf $(CPT_HOME);						 \
 	fi
 	rm -rf $(CPT_PROJDIR) $(CPT_REALCLEAN_FILES)
 	$(CPT_REALCLEAN_MORE)
@@ -118,7 +115,7 @@ ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
 else
   ifeq (,$(CPT_NO_ESPHOME))
     $(info Makefile.cpptext: activated Makefile.cpptext and Makefile.esphome.)
-    include $(CPT_OUTDIR)/cpptext/Makefile.esphome
+    include $(CPT_HOME)/Makefile.esphome
   else
     # exclude Makefile.esphome by defining CPT_NO_ESPHOME Makefile that includes this
     $(info Makefile.cpptext: activate Makefile.cpptext included.)
@@ -126,5 +123,5 @@ else
 endif
 
 .PHONY:    all clean realclean mkdirs cppTgt $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT)
-.PRECIOUS: $(CPT_PROJDIR) $(CPT_OUTDIR) $(CPT_OUTDIR)/cpptext
+.PRECIOUS: $(CPT_PROJDIR) $(CPT_BUILD) $(CPT_HOME)
 

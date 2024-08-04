@@ -59,10 +59,12 @@ echo '
     # // concatenate lines ending in backslash for further processing below
     # // this will handle multiline comments or cpp directives 
     :x; /\\\s*$/ { N; s/\\\n//; tx }
-    # // map #default <a> <b> to #ifndef a \n #define <a> <b> \n #endif \n
+    # // map #default X Y to #ifndef X \n#define X Y\n#endif\n
     {s/^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$/#ifndef \1\n#define \1 \2\n#endif/}
-    # // map #default <a> to #ifndef a \n #define <a> \n #endif \n
+    # // map #default X to #ifndef X \n#define X\n#endif\n
     {s/^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$/#ifndef \1\n#define \1\n#endif/}
+    # // map #includeif X to #ifdef X \n#include X\n#endif\n
+    {s/^\s*#\s*includeif\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$/#ifdef \1\n#include \1\n#endif/}
     # // keep cpp directive lines (b=branch next line)
     /^\s*#\s*(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning)/b
   #endif // CPP
