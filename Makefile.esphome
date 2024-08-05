@@ -15,13 +15,14 @@ define CPT_CPP_MORE
 	@printf "Makefile.esphome: Merging "
 	@echo -n $$(grep '^\S' $(CPT_OUTFILE) | wc -l)
 	@printf " component definitions\n"
+	@rm -f $(CPT_OUTFILE).*
 	@awk '							    \
 	    /^[^[:space:]]/{close(F);F=FILENAME"."NR;print $$0>F};  \
 	    /^[[:space:]]/{print $$0>F}				    \
 	' $(CPT_OUTFILE)
 	@yq eval-all '. as $$item ireduce ({}; . *+ $$item)'	    \
 		$(CPT_OUTFILE).* > $(CPT_OUTFILE)
-	@rm $(CPT_OUTFILE).*
+	@rm -f $(CPT_OUTFILE).*
 endef
 
 # setup secrets.yaml to be in CPT_BUILD if needed

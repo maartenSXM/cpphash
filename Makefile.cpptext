@@ -78,7 +78,7 @@ $(shell mkdir -p $(CPT_MKDIRS))
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
 cppTgt: $(CPT_OUTFILE)
-	@printf "$(CPT_OUTFILE) is up to date\n"
+	@printf "Makefile.cpptext: $(CPT_OUTFILE) is up to date.\n"
 
 # @printf "Generating $@ from dehashed files in $(CPT_PROJDIR)\n"
 $(CPT_OUTFILE): $(CPT_PROJDIR)/$(CPT_MAIN) $(CPT_PROJSRCS)
@@ -101,27 +101,24 @@ clean: $(CPT_EXTRA_CLEAN_TGT)
 	$(CPT_CLEAN_MORE)
 
 realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
-	-@if [ "`git -C $(CPT_HOME) status --porcelain`" != "" ]; then		 \
-		printf "Not removing $(CPT_HOME) since it has been modified.\n"; \
-	else									 \
-		printf "rm -rf $(CPT_HOME)\n";					 \
-		rm -rf $(CPT_HOME);						 \
+	-@if [ "`git -C $(CPT_HOME) status --porcelain`" != "" ]; then	\
+		printf "$(CPT_HOME) not porcelain. Leaving it.\n";	\
+	else								\
+		printf "rm -rf $(CPT_HOME)\n";				\
+		rm -rf $(CPT_HOME);					\
 	fi
 	rm -rf $(CPT_PROJDIR) $(CPT_REALCLEAN_FILES)
 	$(CPT_REALCLEAN_MORE)
 
-ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
-  $(info Makefile.cpptext: deactivated Makefile.esphome.)
-else
-  ifeq (,$(CPT_NO_ESPHOME))
-    $(info Makefile.cpptext: activated Makefile.cpptext and Makefile.esphome.)
+# skip include of Makefile.esphome by defining CPT_NO_ESPHOME to non-empty
+ifeq (,$(CPT_NO_ESPHOME))
+  # include Makefile.esphome if an esphome virtual environment is active
+  ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
     include $(CPT_HOME)/Makefile.esphome
-  else
-    # exclude Makefile.esphome by defining CPT_NO_ESPHOME Makefile that includes this
-    $(info Makefile.cpptext: activate Makefile.cpptext included.)
   endif
 endif
 
-.PHONY:    all clean realclean mkdirs cppTgt $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT)
 .PRECIOUS: $(CPT_PROJDIR) $(CPT_BUILD) $(CPT_HOME)
+.PHONY: all clean realclean mkdirs cppTgt \
+		    $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT)
 
