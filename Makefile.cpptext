@@ -10,37 +10,33 @@
 # Refer to https://github.com/maartenSXM/cpptext/blob/main/README.md
 # for more details.
 
+MAKEFLAGS    += --no-builtin-rules
+MAKEFLAGS    += --no-builtin-variables
+MAKECMDGOALS ?= all
+
 # These can be optionally overridden in a project Makefile that
 # includes this Makefile.cpptext file. 
 
 # set some defaults for unset user variables
-CPT_MAIN    ?= main.yaml
-CPT_SUFFIX  ?= $(suffix $(CPT_MAIN))
 CPT_HOME    ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-CPT_BUILD   ?= .
-CPT_PROJTAG ?= 0
-CPT_PREFIX  ?= myProj_
-CPT_DIRS    ?= .
-CPT_SRCS    ?= $(foreach d,$(CPT_DIRS),	\
-	       $(patsubst ./%,%,$(wildcard $(d)/*$(CPT_SUFFIX))) $(CPT_FILES))
+CPT_BUILD   ?= build
+CPT_PROJECT ?= myProject
 
-CPT_PROJNAME:=$(CPT_PREFIX)$(CPT_PROJTAG)
-
-# Use these overrides to specify dependicies that customize the build
+# Use these overrides to specify dependencies that customize the build
 CPT_PRE_TGT  ?= 
-CPT_POST_TGT ?= 
-ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
 CPT_MAIN_TGT ?= cppTgt
-else
-CPT_MAIN_TGT ?= esphomeTgt # from Makefile.esphome
+CPT_POST_TGT ?= 
+
+# automatically
+ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
 endif
 
 # Use these to specify dependicies that customize cleaning
 CPT_EXTRA_CLEAN_TGT:= $(if $(CPT_EXTRA_CLEAN_TGT),$(CPT_EXTRA_CLEAN_TGT),)
 CPT_EXTRA_REALCLEAN_TGT:= $(if $(CPT_EXTRA_REALCLEAN_TGT),$(CPT_EXTRA_REALCLEAN_TGT),)
 
-ifeq ($(shell test -e $(CPT_MAIN) || echo -n no),no)
-  $(error "$(CPT_MAIN): file not found.")
+ifeq ($(CPT_SRCS),)
+  $(error "set CPT_SRCS to the files you want to run dehash.sh on")
 endif
 
 ifeq ($(shell which gcc),)
@@ -51,53 +47,76 @@ ifeq (,$(findstring GNU,$(shell sed --version)))
   $(error "GNU sed not found. Please install it")
 endif
 
-CPT_PROJDIR := $(CPT_BUILD)/$(CPT_PROJNAME)
-CPT_DEHASH  := $(CPT_HOME)/dehash.sh --cpp
-CPT_OUTFILE := $(CPT_PROJDIR)$(CPT_SUFFIX)
-CPT_OLDOUT  := $(dir $(CPT_OUTFILE)).$(notdir $(CPT_OUTFILE)).old
+ifeq ($(CPT_BUILD),.)
+  $(error "CPT_BUILD set to . not supported.")
+endif
 
-CPT_CPPFLAGS = -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_CPPFLAGS)
-CPT_CPPINCS  = -I$(CPT_PROJDIR) -I. $(CPT_EXTRA_CPPINCS)
-CPT_CPPDEFS  = -D _CPT_PROJTAG_$(CPT_PROJTAG)=1	\
-	       -D _USER_$(USER)=1		\
-	       -D _CPT_PROJTAG=$(CPT_PROJTAG)	\
-	       -D _USER=$(USER)			\
-	       -D _CPT_PROJDIR=$(CPT_PROJDIR)	\
-		$(CPT_EXTRA_CPPDEFS)
+CPT_PROJDIR  := $(CPT_BUILD)/$(CPT_PROJECT)
+CPT_DEHASH   := $(CPT_HOME)/dehash.sh --cpp
+CPT_OUTFILES := $(addprefix $(CPT_BUILD)/,$(patsubst ./%,%,$(CPT_GEN)))
+CPT_OLDOUTS  := $(foreach f,$(CPT_OUTFILES),$(dir $(f)).$(notdir $(f)).old)
+
+CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_FLAGS)
+CPT_CPPINCS  := -I$(CPT_PROJDIR) -I. $(CPT_EXTRA_INCS)
+CPT_CPPDEFS  := -D _CPT_PROJECT_$(CPT_PROJECT)=1	\
+	       -D _USER_$(USER)=1			\
+	       -D _CPT_PROJECT=$(CPT_PROJECT)		\
+	       -D _USER=$(USER)				\
+	       -D _CPT_PROJDIR=$(CPT_PROJDIR)		\
+		$(CPT_EXTRA_DEFS)
 CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
 
-# CPT_PROJSRCS is the list of dehashed CPT_SRCS in CPT_PROJDIR
-# filter-out drops builds artifacts in CPT_SRCS when, for example, CPT_BUILD = .
-CPT_PROJSRCS = $(addprefix $(CPT_PROJDIR)/,$(filter-out $(wildcard $(CPT_BUILD)/$(CPT_PREFIX)*$(CPT_SUFFIX)),$(CPT_SRCS)))
+# CPT_PROJSRCS is the list of dehashed files in CPT_PROJDIR
+CPT_PROJSRCS = $(addprefix $(CPT_PROJDIR)/,$(patsubst ./%,%,$(CPT_SRCS)))
 
-# _DIRS is all build directories (sort filters duplicates)
+# create all build directories (sort filters duplicates)
 CPT_MKDIRS := $(sort $(dir $(CPT_BUILD) $(CPT_PROJDIR) $(CPT_PROJSRCS)))
 
 $(shell mkdir -p $(CPT_MKDIRS))
 
+# skip include of Makefile.esphome by defining CPT_NO_ESPHOME to non-empty
+ifeq (,$(CPT_NO_ESPHOME))
+  # include Makefile.esphome if an esphome virtual environment is active
+  ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
+    CPT_MAIN_TGT = esphomeTgt # from Makefile.esphome
+    include $(CPT_HOME)/Makefile.esphome
+  endif
+endif
+
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
-cppTgt: $(CPT_OUTFILE)
-	@printf "Makefile.cpptext: $(CPT_OUTFILE) is up to date.\n"
+cppTgt: $(CPT_SRCS) $(CPT_PROJSRCS) $(CPT_OUTFILES)
+	@printf "Makefile.cpptext: generated files are up to date.\n"
 
-# @printf "Generating $@ from dehashed files in $(CPT_PROJDIR)\n"
-$(CPT_OUTFILE): $(CPT_PROJDIR)/$(CPT_MAIN) $(CPT_PROJSRCS)
-	@if [ -f '$@' ]; then mv $@ $(CPT_OLDOUT); else touch $(CPT_OLDOUT); fi
-	$(CPT_CPP) -MD -MP -MT $@ -MF $<.d $< -o $@
+$(CPT_SRCS):
+	$(error source file $@ does not exist)
+
+# emit the rules that run cpp to generate all the CPT_OUTFILES
+define cpp_rule
+$(CPT_BUILD)/$(1): $(CPT_PROJDIR)/$(1) $(MAKEFILE_LIST)
+	@if [ -f $$@ ]; then mv $$@ $(2); else touch $(2); fi
+	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
+endef
 
-$(CPT_PROJDIR)/%$(CPT_SUFFIX): %$(CPT_SUFFIX) $(CPT_CPP_MAKEFILE)
-	@printf "Dehashing to $@\n"
-	@$(CPT_DEHASH) $< > $@
+# parameters are the file to generate and a name to use to backup it up
+$(foreach src,$(patsubst ./%,%,$(CPT_GEN)), \
+    $(eval $(call cpp_rule,$(src),$(CPT_BUILD)/.$(src).old)))
 
-$(CPT_PROJDIR)/%.cpt: %.cpt $(CPT_CPP_MAKEFILE)
-	@printf "Dehashing to $@\n"
-	@$(CPT_DEHASH) $< > $@
+# Generate the rules that dehash the sources into the project directory
+define dehash_rule
+$(CPT_PROJDIR)/$(1): $(1) $(MAKEFILE_LIST)
+	@printf "Dehashing to $$@\n"
+	@$(CPT_DEHASH) $$< >$$@
+endef
 
+$(foreach src,$(patsubst ./%,%,$(CPT_SRCS)),$(eval $(call dehash_rule,$(src))))
+
+# include the dependency rules generated from a previous build, if any
 -include $(wildcard $(CPT_PROJDIR)/*.d)
 
 clean: $(CPT_EXTRA_CLEAN_TGT)
-	rm -rf $(CPT_PROJDIR) $(CPT_OUTFILE) $(CPT_OLDOUT) $(CPT_CLEAN_FILES)
+	rm -rf $(CPT_PROJDIR) $(CPT_OUTFILES) $(CPT_OLDOUTS) $(CPT_CLEAN_FILES)
 	$(CPT_CLEAN_MORE)
 
 realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
@@ -109,14 +128,6 @@ realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
 	fi
 	rm -rf $(CPT_PROJDIR) $(CPT_REALCLEAN_FILES)
 	$(CPT_REALCLEAN_MORE)
-
-# skip include of Makefile.esphome by defining CPT_NO_ESPHOME to non-empty
-ifeq (,$(CPT_NO_ESPHOME))
-  # include Makefile.esphome if an esphome virtual environment is active
-  ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
-    include $(CPT_HOME)/Makefile.esphome
-  endif
-endif
 
 .PRECIOUS: $(CPT_PROJDIR) $(CPT_BUILD) $(CPT_HOME)
 .PHONY: all clean realclean mkdirs cppTgt \

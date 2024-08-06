@@ -11,18 +11,18 @@ ifeq ($(shell which yq),)
 $(error "yq not found. Please install it")
 endif
 
-define CPT_CPP_MORE
-	@printf "Makefile.esphome: Merging "
-	@echo -n $$(grep '^\S' $(CPT_OUTFILE) | wc -l)
-	@printf " component definitions\n"
-	@rm -f $(CPT_OUTFILE).*
-	@awk '							    \
-	    /^[^[:space:]]/{close(F);F=FILENAME"."NR;print $$0>F};  \
-	    /^[[:space:]]/{print $$0>F}				    \
-	' $(CPT_OUTFILE)
-	@yq eval-all '. as $$item ireduce ({}; . *+ $$item)'	    \
-		$(CPT_OUTFILE).* > $(CPT_OUTFILE)
-	@rm -f $(CPT_OUTFILE).*
+CPT_PRJYAML := $(CPT_BUILD)/$(CPT_ESP_YAML)
+CPT_OLDYAML := $(dir $(CPT_PRJYAML)).$(notdir $(CPT_PRJYAML)).old
+CPT_MERGED  := $(CPT_BUILD)/$(basename $(CPT_ESP_YAML)).merged
+
+define CPT_ESP_MERGE
+	@printf '\n%b' "Makefile.esphome: \033[1mMerging "
+	@echo -n $$(grep '^\S' $(CPT_PRJYAML) | wc -l)
+	@printf '%b\n\n' " components in $(CPT_PRJYAML)\033[0m"
+	@awk '/^[^[:space:]]/{print "---"};{print $$0}' $(CPT_PRJYAML) \
+		> $(CPT_MERGED)
+	@yq --inplace eval-all '. as $$item ireduce ({}; . *+ $$item)' \
+		$(CPT_MERGED)
 endef
 
 # setup secrets.yaml to be in CPT_BUILD if needed
@@ -39,6 +39,7 @@ fi
 
 # setup Makefile.cpptext target "clean" to remove secrets.yaml if needed
 CPT_CLEAN_MORE := @					\
+rm -f $(CPT_MERGED);					\
 if [ "$(CPT_BUILD)" != "." -a -f "secrets.yaml" ]; then \
   if [ -L "$(CPT_BUILD)/secrets.yaml" ]; then		\
     echo "rm $(CPT_BUILD)/secrets.yaml";		\
@@ -46,16 +47,15 @@ if [ "$(CPT_BUILD)" != "." -a -f "secrets.yaml" ]; then \
   fi;							\
 fi
 
-# $(CPT_OUTFILE) must exist so the pio project name can be parsed from it
-# since it is defined in yaml. If it doesnt exist, it gets generated here
-# and the make command restarted.
-ifeq (,$(wildcard $(CPT_OUTFILE)))
-esphomeTgt: $(CPT_OUTFILE)
-	@$(MAKE) -f Makefile CPT_BUILD=$(CPT_BUILD) CPT_MAIN_TGT=cppTgt --no-print-directory $(CPT_OUTFILE)
-	@$(MAKE) -f Makefile CPT_BUILD=$(CPT_BUILD) --no-print-directory $(MAKECMDGOALS)
+ifeq (,$(wildcard $(CPT_MERGED)))
+esphomeTgt: cppTgt 
+	$(CPT_ESP_MERGE)
+	cd $(dir $(CPT_PRJYAML)) && esphome compile $(notdir $(CPT_MERGED))
+	@printf "Makefile.esphome: $(CPT_BUILD) $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
 else
 # extract the platformio project name from the generated yaml 
-CPT_ESP_PIONAME	  = $(shell yq -r .esphome.name $(CPT_OUTFILE))
+# note if the .esphome.name is changed, make clean is needed.
+CPT_ESP_PIONAME	  = $(shell yq -r --no-doc .esphome.name $(CPT_MERGED) | grep -v null)
 CPT_ESP_DIR	  = $(CPT_BUILD)
 CPT_ESP_PIOSUBDIR = .esphome/build/$(CPT_ESP_PIONAME)
 CPT_ESP_PIODIR	  = $(CPT_BUILD)/$(CPT_ESP_PIOSUBDIR)
@@ -64,59 +64,78 @@ CPT_ESP_FIRMWARE  = $(CPT_ESP_ELFDIR)/firmware.elf
 CPT_ESP_MAIN	  = $(CPT_ESP_PIODIR)/src/main.cpp
 CPT_ESP_OLDESP	  = $(CPT_ESP_PIODIR)/src/.main.cpp.old
 CPT_ESP_GEN	 ?= esphome compile --only-generate
-CPT_ESP_DEPS	 ?= $(CPT_HOME)/Makefile.esphome	\
-$(foreach d,$(CPT_ESP_DIRS),				\
-  $(wildcard $(d)/*.c)					\
-  $(wildcard $(d)/*.cpp)				\
-  $(wildcard $(d)/*.h)					\
-)
 
 esphomeTgt: cppTgt $(CPT_ESP_FIRMWARE)
-	@printf "Makefile.esphome: $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
+	@printf "Makefile.esphome: $(CPT_BUILD) $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
 
 # skip firmware build if main.cpp is newer than firmware but unchanged
+# Rebuild based on generated file contents, not on timestamps
+
 $(CPT_ESP_FIRMWARE): $(CPT_ESP_MAIN)
 	@cmp --silent $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);	\
 	if [ $$? -eq 0 ]; then					\
-            printf "Makefile.esphome: main.cpp unchanged - not building firmware.elf\n";								\
+            printf "Makefile.esphome: $(CPT_ESP_MAIN) ";	\
+	    printf "unchanged. Done.\n";			\
 	    cp -p $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);		\
         else							\
-            printf "Makefile.esphome: main.cpp changed. Rebuilding firmware.elf\n"; \
-	    printf "cd $(CPT_ESP_DIR); pio run -d $(CPT_ESP_PIOSUBDIR)\n";	    \
-	    cd $(CPT_ESP_DIR); pio run -d $(CPT_ESP_PIOSUBDIR); cd -;		    \
+            printf "Makefile.esphome: $(CPT_ESP_MAIN) ";	\
+	    printf "changed. Continuing\n";		        \
+	    printf "cd $(CPT_ESP_DIR); ";			\
+	    printf "pio run -d $(CPT_ESP_PIOSUBDIR)\n";		\
+	    cd $(CPT_ESP_DIR);					\
+		pio run -d $(CPT_ESP_PIOSUBDIR);		\
+	    cd -;						\
 	    cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP);		\
 	fi
 
-# Regen if there are updates to local includes, libraries, components, fonts etc
-$(CPT_ESP_MAIN):: $(CPT_ESP_DEPS)
-	@printf "Makefile.esphome: Dependency changed. Regen-ing main.cpp\n"
-	cd $(dir $(CPT_OUTFILE)) && $(CPT_ESP_GEN) $(notdir $(CPT_OUTFILE))
-	@cp -p $(CPT_OUTFILE) $(CPT_OLDOUT);
+# Regen if the project passes dependencies to trigger a rebuild
+$(CPT_ESP_MAIN):: $(CPT_ESP_DEPS) $(CPT_HOME)/Makefile.esphome
+	@printf "Makefile.esphome: Dependency changed. "
+	@printf "Generating $(CPT_ESP_MAIN)\n"
+	@printf '\n%b' "Makefile.esphome: \033[1mMerging "
+	@echo -n $$(grep '^\S' $(CPT_PRJYAML) | wc -l)
+	@printf '%b\n\n' " components in $(CPT_PRJYAML)\033[0m"
+	@awk '/^[^[:space:]]/{print "---"};{print $$0}' $(CPT_PRJYAML) > $(CPT_MERGED)
+	@yq --inplace eval-all '. as $$item ireduce ({}; . *+ $$item)' $(CPT_MERGED)
+	@printf "cd $(dir $(CPT_PRJYAML))"
+	@printf "$(CPT_ESP_GEN) $(notdir $(CPT_PRJYAML))\n"
+	cd $(dir $(CPT_MERGED)) && \
+	    $(CPT_ESP_GEN) $(notdir $(CPT_MERGED))
+	@cp -p $(CPT_PRJYAML) $(CPT_OLDYAML)
     
 # skip esphome compile if main yaml file is newer than main.cpp but unchanged
-$(CPT_ESP_MAIN):: $(CPT_OUTFILE) 
+$(CPT_ESP_MAIN):: $(CPT_PRJYAML) 
 	$(CPT_ESP_BUILD_MORE)
-	@cmp --silent $(CPT_OLDOUT) $(CPT_OUTFILE);		    \
+	@cmp --silent $(CPT_OLDYAML) $(CPT_PRJYAML);		    \
 	if [ $$? -eq 0 ]; then					    \
-            printf "Makefile.esphome: yaml unchanged. Not regenerating main.cpp\n"; \
-	    cp -p $(CPT_OLDOUT) $(CPT_OUTFILE);			    \
+            printf "Makefile.esphome: $(CPT_PRJYAML) unchanged. ";  \
+	    printf "Done.\n";					    \
+	    touch -r $(CPT_OLDYAML) $(CPT_PRJYAML);		    \
+	    touch -r $(CPT_OLDYAML) $(CPT_MERGED);		    \
         else							    \
-            printf "Makefile.esphome: yaml changed. Regenerating main.cpp\n"; \
+            printf "Makefile.esphome: $(CPT_PRJYAML) changed. ";    \
+	    printf "Continuing\n";				    \
 	    if [ -f '$@' ]; then				    \
 		mv $@ $(CPT_ESP_OLDESP);			    \
 	    else						    \
 		touch $(CPT_ESP_OLDESP);			    \
 	    fi;							    \
-	    printf "cd $(dir $(CPT_OUTFILE));"			    \
-	    printf "$(CPT_ESP_GEN) $(notdir $(CPT_OUTFILE))\n";	    \
-	    cd $(dir $(CPT_OUTFILE)); $(CPT_ESP_GEN) $(notdir $(CPT_OUTFILE)); cd -;\
-	    cp -p $(CPT_OUTFILE) $(CPT_OLDOUT);			    \
+	    printf '\n%b' "Makefile.esphome: \033[1mMerging ";	    \
+	    echo -n $$(grep '^\S' $(CPT_PRJYAML) | wc -l);	    \
+	    printf '%b\n\n' " components in $(CPT_PRJYAML)\033[0m"; \
+	    awk '/^[^[:space:]]/{print "---"};{print $$0}' $(CPT_PRJYAML) > $(CPT_MERGED);							    \
+	    yq --inplace eval-all '. as $$item ireduce ({}; . *+ $$item)' $(CPT_MERGED);							    \
+	    printf "cd $(dir $(CPT_PRJYAML))";			    \
+	    printf "$(CPT_ESP_GEN) $(notdir $(CPT_MERGED))\n";	    \
+	    cd $(dir $(CPT_MERGED));				    \
+		$(CPT_ESP_GEN) $(notdir $(CPT_MERGED));		    \
+	    cd -;						    \
+	    cp -p $(CPT_PRJYAML) $(CPT_OLDYAML);		    \
 	fi
+endif
 
 # target "realclean" cleans .esphome from $(CPT_BUILD)
 CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD)/.esphome 
 
-endif
-
 .PHONY: espDeps esphomeTgt
-.PRECIOUS: $(CPT_ESP_FIRMWARE)
+.PRECIOUS: $(CPT_ESP_FIRMWARE) $(CPT_ESP_MAIN)
