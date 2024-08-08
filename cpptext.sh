@@ -1,50 +1,76 @@
-#!/bin/bash
+#!/bin/bash -x
+
+name=`basename $0`
 scriptpath="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 dehash="$scriptpath/dehash.sh -c"
+postcpp=cat
+yamlmerge="$scriptpath/yamlmerge.sh"
 
-verbose=0
-clean=0
-tempdir=.cpptext
-gcc="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror"
-help="$0: run the C preprocessor (cpp) on files with hash-style comments
-Usage: $0 [-f] [-C] [-v] [-h] [-t <dir>] [-D define|define=<x>] [-I includedir] cppFile [extraFiles]...
--t|--tempdir\targument is a directory for temporary files. Defaults is .cpptext
--D|--define>\tadd the argument as a define to pass to cpp
--I|--include\tadd the argument as an include file directory to pass to cpp
--o|--outfile\targument is a filename to write to.  Default is <cppFile>.cpp 
-\t\t(Use \"-o -\" for stdout)
--b|--blank\tkeep blank lines
--C|--clean\tdelete the directory containing temporary files
--v|--verbose\tverbose mode
--h|--help\tthis help text
+help="$name: run the Gnu C preprocessor (cpp) on files with hash-style
+      comments by de-hashing them first.
 
-cppFile\t\tthe main file to run cpp on which optionally includes <extraFiles>.
-[extraFiles]\textra files to process that are #included by <cppFile>
+Usage: $name [-f] [-w] [-W] [-v] [-n] [-h] [-t <dir>]
+       [-D <define>|<define>=<x>]... [-I <includeDir>]...
+       cppFile <extraFiles>...
 
-$0 overwrites the file specified by -o (default is <cppFile>.cpp)
+ -D		 Set defines for cpp. Argument required.
+ -I		 Set include file directories for cpp. Argument required.
+ -t|--tempdir    Set the temporary file directory. Defaults to \".cpptext/\".
+ -o|--outfile    Set the output file name. Default is <cppFile>.cpp.
+                 (Use \"-o -\" for stdout).
+ -y|--yaml-merge after cpp-ing, merge duplicate yaml map keys in <cppFile>.
+ -f|--force      allow $name to overwrite an existing $outfile.
+ -b|--blank      Keep blank lines.
+ -w|--wipe       Delete the temporary file directory contents and continue.
+ -W|--wipe-only  Delete the temporary file directory and exit.
+ -v|--verbose    Verbose mode.
+ -n|--no-exec    Don\'t execute anything. Enables -v.
+ -h|--help       Print out this help text.
+
+<cppFile> is run through the C preprcoessor. It is a mandatory argument.
+The optional [extraFiles]... are de-hashed for #include-ing by <cppFile>.
+
+Please note that $name overwrites the output file which defaults to
+<cppFile>.cpp>. Also, please note that the mandatory arguments to -D
+and -I are positional and so there must be a space between -D and -I
+and their arguments.
+
+This script is from git repo github.com/maartenSXM/cpptext.
+Note: this script does not vet arguments securely. Do not setuid or host it.
 "
+
+doit=1
+wipe=0
+wipeonly=0
+verbose=0
+force=0
+tempdir=.cpptext
+
+gcc="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror"
 
 while [[ $# > 0 ]]
 do
   case $1 in
-    -D|--define)  cppdefs="$cppdefs -D $2"; shift 2;;
-    -I|--include) cppincs="$cppincs -I $2"; shift 2;;
-    -t|--tempdir) tempdir="$2"; shift 2;; 
-    -o|--outfile) outfile="$2"; shift 2;; 
-    -b|--blank)   dehash="$dehash -b"; gcc="$gcc -traditional-cpp"; shift;; 
-    -C|--clean)   clean=1; shift;; 
-    -v|--verbose) verbose=1; shift;; 
-    -h|--help)    echo -e "$help"; exit 0;; 
+    -D|--define)     cppdefs="$cppdefs -D $2"; shift 2;;
+    -I|--include)    cppincs="$cppincs -I $2"; shift 2;;
+    -t|--tempdir)    tempdir="$2"; shift 2;; 
+    -o|--outfile)    outfile="$2"; shift 2;; 
+    -y|--yaml-merge) postcpp=$yamlmerge; shift;; 
+    -b|--blank)      dehash="$dehash -b"; gcc="$gcc -traditional-cpp"; shift;; 
+    -f|--force)      force=1; shift;; 
+    -c|--wipe)       wipe=1; shift;; 
+    -C|--wipe-only)  wipe=1; wipeonly=1; shift;; 
+    -v|--verbose)    verbose=1; shift;; 
+    -n|--no-exec)    doit=0; verbose=1; shift;; 
+    -h|--help)       echo -e "$help"; exit 0;; 
     *) break
   esac
 done
 
-if [ $clean == 1 ]; then
-  if [ $verbose == 1 ]; then
-    echo rm -rf $tempdir
-  fi
-  rm -rf "$tempdir"
-  exit $?
+if ((wipe)); then
+   ((verbose))   && echo rm -rf $tempdir
+   ((doit))      && rm -rf "$tempdir"
+   ((wipeonly))  && exit
 fi
 
 run_dehash() {
@@ -59,8 +85,10 @@ run_dehash() {
     echo "$0: $fullname is not a regular file"
     exit -1
   fi
-  if LC_ALL=C grep -q '[^[:cntrl:][:print:]]' "$fullname"; then
-    echo "$0: $fullname is not an ASCII text file"
+
+  # check that the caller specified a text file 
+  if file "$fullname" | grep -qv 'ASCII\|UTF-8'; then
+    echo "$0: $fullname is not an ASCII or UTF-8 text file"
     exit -1
   fi
 
@@ -74,54 +102,56 @@ run_dehash() {
 
   # create the $tempdir path including subdirectories, if needed
   if [ ! -d "$dehashoutdir" ]; then
-    if [ $verbose == 1 ]; then
-      echo "mkdir -p $dehashoutdir"
-    fi
-    mkdir -p "$dehashoutdir"
+   ((verbose)) && echo "mkdir -p $dehashoutdir"
+   if ((doit)); then mkdir -p "$dehashoutdir" || exit; fi
   fi
 
-  filedir=`dirname $fullname`
+  filedir="`dirname $fullname`"
   if [ $filedir != "." ]; then
     dehashout="$tempdir/$filedir/$filename"
   else
     dehashout="$tempdir/$filename"
   fi
   
-  if [ $verbose == 1 ]; then
-    echo "$0: $dehash $fullname >$dehashout"
-  fi
-  $dehash "$fullname" >"$dehashout"
+  ((verbose)) && echo "$0: $dehash $fullname >$dehashout"
+  if ((doit)); then $dehash "$fullname" >"$dehashout" || exit; fi
 }
 
-mainfile=$1
-# dehash all specified files, including the main file
-for file in "$@"; do
-    run_dehash "$file"
-done
-
 # grok the main filename and setup to cpp it from $tempdir
+mainfile="$1"
 filename=$(basename -- "$mainfile")
-filecppdir="`dirname $mainfile`"
-if [ $filecppdir != "." ]; then
+filecppdir=$(dirname "$mainfile")
+if [ "$filecppdir" != "." ]; then
   cppfile="$tempdir/$filecppdir/$filename"
 else
   cppfile="$tempdir/$filename"
 fi
 
 if [ "$outfile" == "" ]; then
-  outfile="${filename}.cpp"
+  outfile="${filename}.cpt"
 else
   if [ "$outfile" == "-" ]; then
     outfile=/dev/stdout
   fi
 fi
 
-# the sed restores the shebang that dehash.sh may have found
-
-if [ $verbose == 1 ]; then
-  echo "$0: $gcc -I \"$tempdir\" -I . $cppincs $cppdefs \"$cppfile\" | sed '1 {s,^__SHEBANG__,#"'!'",}' > \"$outfile\""
+if [ "$outfile" == "$cppfile" ]; then
+    echo "$0: the input file and output file names must be different"
 fi
 
-$gcc -I "$tempdir" -I . $cppincs $cppdefs "$cppfile" | sed '1 {s,^__SHEBANG__,#!,}' > "$outfile"
+if ((!force)) && [ "$outfile" != "/dev/stdout" ] && [ -f "$outfile" ]; then
+    echo "$0: will not overwrite $outfile unless the -f option is specified."
+fi
 
-exit $?
+# dehash all specified files, including the main file
+for file in "$@"; do
+    run_dehash "$file"
+done
+
+# after cpp, the sed restores the shebang that dehash.sh may have found
+
+((verbose)) && echo "$0: $gcc -I \"$tempdir\" -I . $cppincs $cppdefs \"$cppfile\" | sed '1 {s,^__SHEBANG__,#"'!'",}' | $postcpp > \"$outfile\""
+
+((doit)) && $gcc -I "$tempdir" -I . $cppincs $cppdefs "$cppfile" | sed '1 {s,^__SHEBANG__,#!,}' | $postcpp > "$outfile"
+
+exit

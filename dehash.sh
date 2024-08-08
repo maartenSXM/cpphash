@@ -1,6 +1,17 @@
 #!/bin/bash
 
-HELP="$0 removes '#'-style comments\nUsage: $0 [-c] [-b] [-h] filename\n-c|--cpp\tkeep CPP directives\n-b|--blank\tkeep blank lines\n-h|--help\thelp\nfile\t file to dehash to stout or - for stdin"
+HELP="`basename $0` removes '#'-style comments
+
+Usage: `basename $0` [-c] [-b] [-h] file
+  -c|--cpp\tkeep CPP directives.
+  -b|--blank\tkeep blank lines.
+  -o|--out)\toutfile file (or - for stdout)
+  -h|--help\thelp.
+<file> is the file to dehash to stout (or - for stdin).
+
+This script is from git repo github.com/maartenSXM/cpptext.
+Note: this script does not vet arguments securely. Do not setuid or host it.
+"
 
 while [[ $# > 0 ]]
 do
@@ -100,6 +111,6 @@ echo '
 
   #endif // !BLANK
 
-' | $GCC $GCCFLAGS | sed -E -r -f - $file > "$outfile"
+' | $GCC $GCCFLAGS | sed -E -r -f - "$file" > "$outfile"
 
 exit $?

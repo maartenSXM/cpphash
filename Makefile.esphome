@@ -1,85 +1,86 @@
-# If generating an esphome project, we need to do some extra stuff
-# mostly because esphome looks for secrets.yaml in the same directory
-# as the esphome yaml file - which might be in $(CPT_BUILD) and not ".".
-# The clean target is extended to clean that up.
-#
-# Also, after generating the esphome yaml, it is handy to kick off the
-# esphome compile. Finally, the realclean target is extended to cleanup
-# .esphome which gets created during the issued esphome compile.
+# This makefile attempts to regenerate esphome firmare based on
+# generated file contents, not just based on timestamps.  
+# It will skip esphome yaml generation when the yaml generated
+# by cpptext is unchanged from a previous build.  In addition,
+# It will skip running platformio to build the source generated 
+# by esphome if the generated main.cpp is the same as the previous
+# build.
+
+# The including Makefile should include Makefile.cpptext,
+# which in turn includes this file, Makefile.esphome
+
+# The including Makefile should define CPT_ESP_INIT to an
+# output of Makefile.cpptext (i.e. it is one of the generated
+# files listed in CPT_GEN.
+
+# The including Makefile should also define CPT_ESP_YAML to
+# the name of the yaml file that this Makefile fragment should
+# generate using yamlmerge.sh, for processing by esphome and
+# platformio.
 
 ifeq ($(shell which yq),)
 $(error "yq not found. Please install it")
 endif
 
-CPT_PRJYAML := $(CPT_BUILD)/$(CPT_ESP_YAML)
-CPT_OLDYAML := $(dir $(CPT_PRJYAML)).$(notdir $(CPT_PRJYAML)).old
-CPT_MERGED  := $(CPT_BUILD)/$(basename $(CPT_ESP_YAML)).merged
+ESP_PRJYAML := $(CPT_BUILD_DIR)/$(CPT_ESP_INIT)
+ESP_OLDYAML := $(dir $(ESP_PRJYAML)).$(notdir $(ESP_PRJYAML)).old
+ESP_MERGED  := $(CPT_BUILD_DIR)/$(CPT_ESP_YAML)
 
-define CPT_ESP_MERGE
-	@printf '\n%b' "Makefile.esphome: \033[1mMerging "
-	@echo -n $$(grep '^\S' $(CPT_PRJYAML) | wc -l)
-	@printf '%b\n\n' " components in $(CPT_PRJYAML)\033[0m"
-	@awk '/^[^[:space:]]/{print "---"};{print $$0}' $(CPT_PRJYAML) \
-		> $(CPT_MERGED)
-	@yq --inplace eval-all '. as $$item ireduce ({}; . *+ $$item)' \
-		$(CPT_MERGED)
-endef
+# If this is a first time build attempt, initiate a full build
 
-# setup secrets.yaml to be in CPT_BUILD if needed
-CPT_ESP_BUILD_MORE:= -@						    \
-if [ "$(CPT_BUILD)" != "." -a -f "secrets.yaml" ]; then		    \
-  if [ -L "$(CPT_BUILD)/secrets.yaml" ]; then			    \
-    rm -f $(CPT_BUILD)/secrets.yaml;				    \
-    echo "Makefile.esphome: re-linking $(CPT_BUILD)/secrets.yaml";  \
-  else								    \
-    echo "Makefile.esphome: linking $(CPT_BUILD)/secrets.yaml";	    \
-  fi;								    \
-    ln -s secrets.yaml $(CPT_BUILD)/secrets.yaml;		    \
-fi
+ifeq (,$(wildcard $(ESP_MERGED)))
 
-# setup Makefile.cpptext target "clean" to remove secrets.yaml if needed
-CPT_CLEAN_MORE := @					\
-rm -f $(CPT_MERGED);					\
-if [ "$(CPT_BUILD)" != "." -a -f "secrets.yaml" ]; then \
-  if [ -L "$(CPT_BUILD)/secrets.yaml" ]; then		\
-    echo "rm $(CPT_BUILD)/secrets.yaml";		\
-    rm -f $(CPT_BUILD)/secrets.yaml;			\
-  fi;							\
-fi
-
-ifeq (,$(wildcard $(CPT_MERGED)))
 esphomeTgt: cppTgt 
-	$(CPT_ESP_MERGE)
-	cd $(dir $(CPT_PRJYAML)) && esphome compile $(notdir $(CPT_MERGED))
-	@printf "Makefile.esphome: $(CPT_BUILD) $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
+	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
+	cd $(dir $(ESP_PRJYAML)) && esphome compile $(notdir $(ESP_MERGED))
+	@printf "Makefile.esphome: $(CPT_BUILD_DIR) $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
+
 else
-# extract the platformio project name from the generated yaml 
-# note if the .esphome.name is changed, make clean is needed.
-CPT_ESP_PIONAME	  = $(shell yq -r --no-doc .esphome.name $(CPT_MERGED) | grep -v null)
-CPT_ESP_DIR	  = $(CPT_BUILD)
-CPT_ESP_PIOSUBDIR = .esphome/build/$(CPT_ESP_PIONAME)
-CPT_ESP_PIODIR	  = $(CPT_BUILD)/$(CPT_ESP_PIOSUBDIR)
-CPT_ESP_ELFDIR    = $(CPT_ESP_PIODIR)/.pio/build/$(CPT_ESP_PIONAME)
-CPT_ESP_FIRMWARE  = $(CPT_ESP_ELFDIR)/firmware.elf
-CPT_ESP_MAIN	  = $(CPT_ESP_PIODIR)/src/main.cpp
-CPT_ESP_OLDESP	  = $(CPT_ESP_PIODIR)/src/.main.cpp.old
-CPT_ESP_GEN	 ?= esphome compile --only-generate
+
+# Extract the platformio project name from the generated yaml 
+# Note if the .esphome.name is changed, a make clean is needed.
+
+CPT_ESP_PIONAME	  := $(shell yq -r --no-doc .esphome.name $(ESP_MERGED) \
+		     | grep -v null)
+
+CPT_ESP_DIR	  := $(CPT_BUILD_DIR)
+CPT_ESP_PIOSUBDIR := .esphome/build/$(CPT_ESP_PIONAME)
+CPT_ESP_PIODIR	  := $(CPT_BUILD_DIR)/$(CPT_ESP_PIOSUBDIR)
+CPT_ESP_ELFDIR    := $(CPT_ESP_PIODIR)/.pio/build/$(CPT_ESP_PIONAME)
+CPT_ESP_FIRMWARE  := $(CPT_ESP_ELFDIR)/firmware.elf
+CPT_ESP_MAIN	  := $(CPT_ESP_PIODIR)/src/main.cpp
+CPT_ESP_OLDESP	  := $(CPT_ESP_PIODIR)/src/.main.cpp.old
+CPT_ESP_GEN	  := esphome compile --only-generate
+
+# backed up build files don't exist after the initial build. Create them.
+
+ifeq (,$(wildcard $(CPT_ESP_OLDYAML)))
+  ifeq (,$(wildcard $(CPT_PRYAML)))
+    $(shell cp -p $(ESP_PRJYAML) $(ESP_OLDYAML))
+  endif
+endif
+
+ifeq (,$(wildcard $(CPT_ESP_OLDESP)))
+  ifeq (,$(wildcard $(CPT_ESP_MAIN)))
+    $(shell cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP))
+  endif
+endif
 
 esphomeTgt: cppTgt $(CPT_ESP_FIRMWARE)
-	@printf "Makefile.esphome: $(CPT_BUILD) $(CPT_ESP_PIONAME) $(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
+	@printf "Makefile.esphome: $(CPT_BUILD_DIR) $(CPT_ESP_PIONAME) "
+	@printf "$(notdir $(CPT_ESP_FIRMWARE)) is up to date.\n"
 
-# skip firmware build if main.cpp is newer than firmware but unchanged
-# Rebuild based on generated file contents, not on timestamps
+# Skip firmware build if main.cpp is newer than firmware but unchanged
 
 $(CPT_ESP_FIRMWARE): $(CPT_ESP_MAIN)
 	@cmp --silent $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);	\
 	if [ $$? -eq 0 ]; then					\
             printf "Makefile.esphome: $(CPT_ESP_MAIN) ";	\
 	    printf "unchanged. Done.\n";			\
-	    cp -p $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);		\
+	    touch -r $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);		\
         else							\
             printf "Makefile.esphome: $(CPT_ESP_MAIN) ";	\
-	    printf "changed. Continuing\n";		        \
+	    printf "changed. Building firmware.\n";	        \
 	    printf "cd $(CPT_ESP_DIR); ";			\
 	    printf "pio run -d $(CPT_ESP_PIOSUBDIR)\n";		\
 	    cd $(CPT_ESP_DIR);					\
@@ -88,54 +89,66 @@ $(CPT_ESP_FIRMWARE): $(CPT_ESP_MAIN)
 	    cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP);		\
 	fi
 
-# Regen if the project passes dependencies to trigger a rebuild
+# Run esphome if one of the project's trigger dependencies was updated.
+
 $(CPT_ESP_MAIN):: $(CPT_ESP_DEPS) $(CPT_HOME)/Makefile.esphome
 	@printf "Makefile.esphome: Dependency changed. "
 	@printf "Generating $(CPT_ESP_MAIN)\n"
-	@printf '\n%b' "Makefile.esphome: \033[1mMerging "
-	@echo -n $$(grep '^\S' $(CPT_PRJYAML) | wc -l)
-	@printf '%b\n\n' " components in $(CPT_PRJYAML)\033[0m"
-	@awk '/^[^[:space:]]/{print "---"};{print $$0}' $(CPT_PRJYAML) > $(CPT_MERGED)
-	@yq --inplace eval-all '. as $$item ireduce ({}; . *+ $$item)' $(CPT_MERGED)
-	@printf "cd $(dir $(CPT_PRJYAML))"
-	@printf "$(CPT_ESP_GEN) $(notdir $(CPT_PRJYAML))\n"
-	cd $(dir $(CPT_MERGED)) && \
-	    $(CPT_ESP_GEN) $(notdir $(CPT_MERGED))
-	@cp -p $(CPT_PRJYAML) $(CPT_OLDYAML)
+	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
+	cd $(dir $(ESP_MERGED)) && $(CPT_ESP_GEN) $(notdir $(ESP_MERGED))
+	@cp -p $(ESP_PRJYAML) $(ESP_OLDYAML)
     
-# skip esphome compile if main yaml file is newer than main.cpp but unchanged
-$(CPT_ESP_MAIN):: $(CPT_PRJYAML) 
+# Skip the esphome compile if the main yaml file contents didn't change.
+
+$(CPT_ESP_MAIN):: $(ESP_PRJYAML) 
 	$(CPT_ESP_BUILD_MORE)
-	@cmp --silent $(CPT_OLDYAML) $(CPT_PRJYAML);		    \
+	@cmp --silent $(ESP_OLDYAML) $(ESP_PRJYAML);		    \
 	if [ $$? -eq 0 ]; then					    \
-            printf "Makefile.esphome: $(CPT_PRJYAML) unchanged. ";  \
+            printf "Makefile.esphome: $(ESP_PRJYAML) unchanged. ";  \
 	    printf "Done.\n";					    \
-	    touch -r $(CPT_OLDYAML) $(CPT_PRJYAML);		    \
-	    touch -r $(CPT_OLDYAML) $(CPT_MERGED);		    \
+	    touch -r $(ESP_OLDYAML) $(ESP_PRJYAML);		    \
         else							    \
-            printf "Makefile.esphome: $(CPT_PRJYAML) changed. ";    \
-	    printf "Continuing\n";				    \
-	    if [ -f '$@' ]; then				    \
-		mv $@ $(CPT_ESP_OLDESP);			    \
-	    else						    \
-		touch $(CPT_ESP_OLDESP);			    \
-	    fi;							    \
-	    printf '\n%b' "Makefile.esphome: \033[1mMerging ";	    \
-	    echo -n $$(grep '^\S' $(CPT_PRJYAML) | wc -l);	    \
-	    printf '%b\n\n' " components in $(CPT_PRJYAML)\033[0m"; \
-	    awk '/^[^[:space:]]/{print "---"};{print $$0}' $(CPT_PRJYAML) > $(CPT_MERGED);							    \
-	    yq --inplace eval-all '. as $$item ireduce ({}; . *+ $$item)' $(CPT_MERGED);							    \
-	    printf "cd $(dir $(CPT_PRJYAML))";			    \
-	    printf "$(CPT_ESP_GEN) $(notdir $(CPT_MERGED))\n";	    \
-	    cd $(dir $(CPT_MERGED));				    \
-		$(CPT_ESP_GEN) $(notdir $(CPT_MERGED));		    \
+            printf "Makefile.esphome: $(ESP_PRJYAML) changed. ";    \
+	    @printf "Generating $(CPT_ESP_MAIN)\n";		    \
+	    $(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML);\
+	    printf "cd $(dir $(ESP_PRJYAML))";			    \
+	    printf "$(CPT_ESP_GEN) $(notdir $(ESP_MERGED))\n";	    \
+	    cd $(dir $(ESP_MERGED));				    \
+		$(CPT_ESP_GEN) $(notdir $(ESP_MERGED));		    \
 	    cd -;						    \
-	    cp -p $(CPT_PRJYAML) $(CPT_OLDYAML);		    \
+	    cp -p $(ESP_PRJYAML) $(ESP_OLDYAML);		    \
 	fi
 endif
 
-# target "realclean" cleans .esphome from $(CPT_BUILD)
-CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD)/.esphome 
+# When generating an esphome project, we need to do some extra stuff
+# for secrets.yaml since esphome expects it to be in the same directory
+# as the esphome yaml file.  That is, in $(CPT_BUILD_DIR). So 
+# the build and clean targets are extended to handle that.
+
+CPT_ESP_BUILD_MORE:= -@						    \
+if [ "$(CPT_BUILD_DIR)" != "." -a -f "secrets.yaml" ]; then		    \
+  if [ -L "$(CPT_BUILD_DIR)/secrets.yaml" ]; then			    \
+    rm -f $(CPT_BUILD_DIR)/secrets.yaml;				    \
+    echo "Makefile.esphome: re-linking $(CPT_BUILD_DIR)/secrets.yaml";  \
+  else								    \
+    echo "Makefile.esphome: linking $(CPT_BUILD_DIR)/secrets.yaml";	    \
+  fi;								    \
+    ln -s secrets.yaml $(CPT_BUILD_DIR)/secrets.yaml;		    \
+fi
+
+# setup Makefile.cpptext target "clean" to remove secrets.yaml if needed
+
+CPT_CLEAN_MORE := @					\
+if [ "$(CPT_BUILD_DIR)" != "." -a -f "secrets.yaml" ]; then \
+  if [ -L "$(CPT_BUILD_DIR)/secrets.yaml" ]; then		\
+    echo "rm $(CPT_BUILD_DIR)/secrets.yaml";		\
+    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			\
+  fi;							\
+fi
+
+# target "realclean" cleans .esphome from $(CPT_BUILD_DIR)
+
+CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome 
 
 .PHONY: espDeps esphomeTgt
 .PRECIOUS: $(CPT_ESP_FIRMWARE) $(CPT_ESP_MAIN)
