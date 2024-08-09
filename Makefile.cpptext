@@ -82,8 +82,13 @@ endif
 
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
+_nothing:=
+_comma:=,
+_space:=$(nothing) $(nothing)
 cppTgt: $(CPT_SRCS) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
-	@printf "Makefile.cpptext: generated files are up to date.\n"
+	@printf "Makefile.cpptext: $(CPT_BUILD_DIR)/"
+	@printf "{$(subst $(_space),$(_comma),$(notdir $(CPT_OUTFILES)))} "
+	@printf "are up to date.\n"
 
 $(CPT_SRCS):
 	$(error source file $@ does not exist)
@@ -91,7 +96,7 @@ $(CPT_SRCS):
 # emit the rules that run cpp to generate all the CPT_OUTFILES
 define cpp_rule
 $(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1) $(MAKEFILE_LIST)
-	@if [ -f $$@ ]; then mv $$@ $(2); else touch $(2); fi
+	# @if [ -f $$@ ]; then mv $$@ $(2); else touch $(2); fi
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef
