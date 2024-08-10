@@ -17,10 +17,17 @@ MAKECMDGOALS ?= all
 # These can be optionally overridden in a project Makefile that
 # includes this Makefile.cpptext file. 
 
-# set some defaults for unset user variables
-CPT_HOME       ?= $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-CPT_BUILD_DIR  ?= build
-CPT_TMP_SUBDIR ?= .cpptext
+# set some defaults for unset simply expanded variables
+
+ifeq (,$(CPT_HOME))
+CPT_HOME := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+endif
+ifeq (,$(CPT_BUILD_DIR))
+CPT_BUILD_DIR := build
+endif
+ifeq (,$(CPT_TMP_SUBDIR))
+CPT_TMP_SUBDIR := dehashed
+endif
 
 # Use these overrides to specify dependencies that customize the build
 CPT_PRE_TGT  ?= 
@@ -67,7 +74,7 @@ CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS)
 CPT_TMP_SRCS = $(addprefix $(CPT_TMP_DIR)/,$(patsubst ./%,%,$(CPT_SRCS)))
 
 # create all build directories (sort filters duplicates)
-CPT_MKDIRS := $(sort $(dir $(CPT_BUILD_DIR) $(CPT_TMP_DIR) $(CPT_TMP_SRCS)))
+CPT_MKDIRS := $(sort $(CPT_BUILD_DIR) $(CPT_TMP_DIR) $(dir $(CPT_TMP_SRCS)))
 
 $(shell mkdir -p $(CPT_MKDIRS))
 
@@ -75,20 +82,20 @@ $(shell mkdir -p $(CPT_MKDIRS))
 ifeq (,$(CPT_NO_ESPHOME))
   # include Makefile.esphome if an esphome virtual environment is active
   ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
-    CPT_MAIN_TGT = esphomeTgt # from Makefile.esphome
+    # espHomeTgt is defined in Makefile.esphome
+    CPT_MAIN_TGT = esphomeTgt
     include $(CPT_HOME)/Makefile.esphome
   endif
 endif
 
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
-_nothing:=
-_comma:=,
-_space:=$(nothing) $(nothing)
+define uptodate
+  printf "Makefile.cpptext: $(CPT_BUILD_DIR)/$(1) is up to date\n";
+endef
+
 cppTgt: $(CPT_SRCS) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
-	@printf "Makefile.cpptext: $(CPT_BUILD_DIR)/"
-	@printf "{$(subst $(_space),$(_comma),$(notdir $(CPT_OUTFILES)))} "
-	@printf "are up to date.\n"
+	@$(foreach tgt,$(notdir $(CPT_OUTFILES)),$(call uptodate,$(tgt)))
 
 $(CPT_SRCS):
 	$(error source file $@ does not exist)
@@ -96,7 +103,6 @@ $(CPT_SRCS):
 # emit the rules that run cpp to generate all the CPT_OUTFILES
 define cpp_rule
 $(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1) $(MAKEFILE_LIST)
-	# @if [ -f $$@ ]; then mv $$@ $(2); else touch $(2); fi
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef
