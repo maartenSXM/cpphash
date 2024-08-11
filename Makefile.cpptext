@@ -4,8 +4,8 @@
 # depends on $(CPT_HOME) being a git clone of github.com/maartenSXM/cpptext.
 #
 # See https://github.com/maartenSXM/cpptext/blob/main/Makefile for
-# an example of how to automatically clone this repo and include this file
-# from a Makefile.
+# an example of how to automatically setup this repo as a submodule
+# and include this file from a Makefile.
 #
 # Refer to https://github.com/maartenSXM/cpptext/blob/main/README.md
 # for more details.
@@ -20,7 +20,7 @@ MAKECMDGOALS ?= all
 # set some defaults for unset simply expanded variables
 
 ifeq (,$(CPT_HOME))
-CPT_HOME := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+CPT_HOME := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 endif
 ifeq (,$(CPT_BUILD_DIR))
 CPT_BUILD_DIR := build
