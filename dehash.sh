@@ -76,17 +76,22 @@ echo '
     :x; /\\\s*$/ { N; s/\\\n//; tx }
 
     # // map #default X Y to #ifndef X \n#define X Y\n#endif\n
-    {s/^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$/#ifndef \1\n#define \1 \2\n#endif/}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#default \1 \2\n#   ifndef \1\n#   define \1 \2\n#   endif@}
 
     # // map #default X to #ifndef X \n#define X\n#endif\n
-    {s/^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$/#ifndef \1\n#define \1\n#endif/}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$@//#default \1\n#   ifndef \1\n#   define \1\n#   endif@}
 
     # // map #redefine X Y to #undef X \n#define X Y\n
-    {s/^\s*#\s*redefine\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$/#undef \1\n#define \1 \2/}
+    {s@^\s*#\s*redefine\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#redefine \1\n#   undef   \1\n#   define  \1 \2@}
+
+    # // emit comment to indicate #default or #redefine was expanded
+    /^\/\/#(default|redefine) /b
 
     # // keep cpp directive lines (b=branch next line)
     /^\s*#\s*(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning)/b
 
+    # // keep C comment lines starting with // that have a hash
+    /^\s*\/\/.*#/b
   #endif // CPP
   
   # // delete lines starting with #

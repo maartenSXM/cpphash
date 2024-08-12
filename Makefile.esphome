@@ -150,6 +150,16 @@ define CPT_CLEAN_MORE
 	fi
 endef
 
+define print_defaults_rule
+print-defaults::
+	@printf "Default values for $(1)\n"
+	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) | \
+		grep '^//#default' | sed 's/^../  /'
+endef
+
+$(foreach gen,$(patsubst ./%,%,$(CPT_GEN)), \
+    $(eval $(call print_defaults_rule,$(gen))))
+
 # target "realclean" cleans .esphome from $(CPT_BUILD_DIR)
 
 CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome $(CPT_BUILD_DIR)/.gitignore
