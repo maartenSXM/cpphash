@@ -76,22 +76,22 @@ echo '
     :x; /\\\s*$/ { N; s/\\\n//; tx }
 
     # // Map "#default X no" to "#ifndef X \n#define X 0\n#endif\n"
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*no($|\s.*$)@//#default \1\tno\n#   ifndef \1\n#   define \1 0\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*no)($|\s.*$)@//#default \1\2\3\n#   ifndef \1\n#   define \1 0\n#   endif@}
 
     # // Map "#default X yes" to "#ifndef X \n#define X 1\n#endif\n"
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*yes($|\s.*$)@//#default \1\tyes\n#   ifndef \1\n#   define \1 1\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*yes)($|\s.*$)@//#default \1\2\3\n#   ifndef \1\n#   define \1 1\n#   endif@}
 
     # // Map "#default X Y" to "#ifndef X \n#define X Y\n#endif\n"
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#default \1\t\2\n#   ifndef \1\n#   define \1\t\2\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*)(.*)$@//#default \1\2\3\n#   ifndef \1\n#   define \1\t\3\n#   endif@}
 
     # // Map "#default X" to "#ifndef X \n#define X\n#endif\n"
     # // Not recommended in general since #ifdef X is legit code without
     # // a #default. Use "#default X yes" with "#if X" instead to catch
     # // missing #defaults and typos in #if or #default statements.
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$@//#default \1\n#   ifndef \1\n#   define \1\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(.*)$@//#default \1\2\n#   ifndef \1\n#   define \1\n#   endif@}
 
     # // Map "#redefine X Y" to "#undef X \n#define X Y\n"
-    {s@^\s*#\s*redefine\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#redefine \1\n#   undef   \1\n#   define  \1 \2@}
+    {s@^\s*#\s*redefine\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*)(.*)$@//#redefine \1\2\3\n#   undef   \1\n#   define  \1 \3@}
 
     # // Done expanding #default or #redefine, go to next line
     /^\/\/#(default|redefine) /b

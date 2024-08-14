@@ -49,7 +49,7 @@ CPT_ESP_NAME	  := $(shell yq -r --no-doc .esphome.name $(ESP_MERGED) \
 CPT_ESP_DIR	  := $(CPT_BUILD_DIR)
 CPT_ESP_PIOSUBDIR := .esphome/build/$(CPT_ESP_NAME)
 CPT_ESP_PIODIR	  := $(CPT_BUILD_DIR)/$(CPT_ESP_PIOSUBDIR)
-CPT_ESP_ELFDIR    := $(CPT_ESP_PIODIR)/.pio/build/$(CPT_ESP_NAME)
+CPT_ESP_ELFDIR    := $(CPT_ESP_PIODIR)/.pioenvs/$(CPT_ESP_NAME)
 CPT_ESP_FIRMWARE  := $(CPT_ESP_ELFDIR)/firmware.elf
 CPT_ESP_MAIN	  := $(CPT_ESP_PIODIR)/src/main.cpp
 CPT_ESP_OLDESP	  := $(CPT_ESP_PIODIR)/src/.main.cpp.old
@@ -81,20 +81,28 @@ esphomeTgt: cppTgt $(CPT_ESP_FIRMWARE)
 
 $(CPT_ESP_FIRMWARE): $(CPT_ESP_MAIN)
 	@cmp --silent $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN); status=$$?;\
-	if [ $$status == 0 -a -f $(CPT_ESP_FIRMWARE) ]; then	    \
+	if [ $$status -eq 0 -a -f $(CPT_ESP_FIRMWARE) ]; then	    \
             printf "Makefile.esphome: $(CPT_BUILD_DIR)...";	    \
 	    printf "$(CPT_ESP_NAME)...main.cpp is up to date\n";    \
 	    touch -r $(CPT_ESP_OLDESP) $(CPT_ESP_MAIN);		    \
         else							    \
             printf "Makefile.esphome: $(CPT_ESP_MAIN) ";	    \
 	    printf "changed. Building firmware.\n";		    \
-	    printf "cd $(CPT_ESP_DIR); ";			    \
-	    printf "pio run -d $(CPT_ESP_PIOSUBDIR)\n";		    \
-	    cd $(CPT_ESP_DIR);					    \
-		pio run -d $(CPT_ESP_PIOSUBDIR);		    \
-	    cd -;						    \
-	    cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP);		    \
+	    printf "esphome compile $(notdir $(ESP_MERGED))";	    \
+	    cd $(dir $(ESP_PRJYAML)) &&				    \
+	       esphome compile $(notdir $(ESP_MERGED)); status=$$?; \
+	    cd - >/dev/null;					    \
+	    if [ $$status -eq 0 ]; then				    \
+	       cp -p $(CPT_ESP_MAIN) $(CPT_ESP_OLDESP);		    \
+	    fi;							    \
 	fi
+
+#	    printf "cd $(CPT_ESP_DIR); ";			    \
+#	    printf "pio run -d $(CPT_ESP_PIOSUBDIR) -t idedata\n";  \
+#	    cd $(CPT_ESP_DIR);					    \
+#		pio run -d $(CPT_ESP_PIOSUBDIR) -t idedata;	    \
+#	    cd - >/dev/null;					    \
+#
 
 # Run esphome if one of the project's trigger dependencies was updated.
 
@@ -102,15 +110,19 @@ $(CPT_ESP_MAIN):: $(CPT_ESP_DEPS) $(CPT_HOME)/Makefile.esphome
 	@printf "Makefile.esphome: Dependency changed. "
 	@printf "Generating $(CPT_ESP_MAIN)\n"
 	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
-	cd $(dir $(ESP_MERGED)) && $(CPT_ESP_GEN) $(notdir $(ESP_MERGED))
-	@cp -p $(ESP_PRJYAML) $(ESP_OLDYAML)
+	@cd $(dir $(ESP_MERGED)) &&				    \
+	    $(CPT_ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \
+	    cd - >/dev/null;					    \
+	    if [ $$status -eq 0 ]; then				    \
+	        cp -p $(ESP_PRJYAML) $(ESP_OLDYAML);		    \
+	    fi
     
 # Skip the esphome compile if the main yaml file contents didn't change.
 
 $(CPT_ESP_MAIN):: $(ESP_PRJYAML) 
 	$(CPT_ESP_BUILD_MORE)
-	@cmp --silent $(ESP_OLDYAML) $(ESP_PRJYAML);		    \
-	if [ $$? -eq 0 ]; then					    \
+	@cmp --silent $(ESP_OLDYAML) $(ESP_PRJYAML); status=$$?;    \
+	if [ $$status -eq 0 ]; then				    \
             printf "Makefile.esphome: $(ESP_PRJYAML) unchanged. ";  \
 	    printf "Done.\n";					    \
 	    touch -r $(ESP_OLDYAML) $(ESP_PRJYAML);		    \
@@ -120,10 +132,12 @@ $(CPT_ESP_MAIN):: $(ESP_PRJYAML)
 	    $(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML);\
 	    printf "cd $(dir $(ESP_PRJYAML))";			    \
 	    printf "$(CPT_ESP_GEN) $(notdir $(ESP_MERGED))\n";	    \
-	    cd $(dir $(ESP_MERGED));				    \
-		$(CPT_ESP_GEN) $(notdir $(ESP_MERGED));		    \
-	    cd -;						    \
-	    cp -p $(ESP_PRJYAML) $(ESP_OLDYAML);		    \
+	    cd $(dir $(ESP_MERGED)) &&				    \
+		$(CPT_ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?; \
+	    cd - >/dev/null;					    \
+	    if [ $$status -eq 0 ]; then				    \
+	        cp -p $(ESP_PRJYAML) $(ESP_OLDYAML);		    \
+	    fi;							    \
 	fi
 endif
 
@@ -155,7 +169,7 @@ define CPT_CLEAN_MORE
 endef
 
 define print_defaults_rule
-print-defaults::
+print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
 	@printf "Default values for $(1)\n"
 	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) | \
 		grep '^//#default' | sed 's/^../  /'
