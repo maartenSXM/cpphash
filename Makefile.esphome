@@ -107,7 +107,7 @@ $(CPT_ESP_FIRMWARE): $(CPT_ESP_MAIN)
 # Run esphome if one of the project's trigger dependencies was updated.
 
 $(CPT_ESP_MAIN):: $(CPT_ESP_DEPS) $(CPT_HOME)/Makefile.esphome
-	@printf "Makefile.esphome: Dependency changed. "
+	@printf "Makefile.esphome: Dependency $? changed. "
 	@printf "Generating $(CPT_ESP_MAIN)\n"
 	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
 	@cd $(dir $(ESP_MERGED)) &&				    \
@@ -128,9 +128,8 @@ $(CPT_ESP_MAIN):: $(ESP_PRJYAML)
 	    touch -r $(ESP_OLDYAML) $(ESP_PRJYAML);		    \
         else							    \
             printf "Makefile.esphome: $(ESP_PRJYAML) changed. ";    \
-	    @printf "Generating $(CPT_ESP_MAIN)\n";		    \
+	    printf "Generating $(CPT_ESP_MAIN)\n";		    \
 	    $(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML);\
-	    printf "cd $(dir $(ESP_PRJYAML))";			    \
 	    printf "$(CPT_ESP_GEN) $(notdir $(ESP_MERGED))\n";	    \
 	    cd $(dir $(ESP_MERGED)) &&				    \
 		$(CPT_ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?; \
