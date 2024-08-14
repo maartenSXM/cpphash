@@ -62,44 +62,53 @@ quoted_word="$double_quoted_word|$single_quoted_word"
 echo '
   #ifndef CPP
 
-    # // if not planning to run output through cpp, line 1 shebang can stay
+    # // If not planning to run output through cpp, line 1 shebang can stay.
     1 {/^#!/p}
 
   #else // CPP
 
-    # // else change it to __SHEBANG__ and caller must change it back
-    # // later with, for example this sed: 1 {s,^__SHEBANG__,#!}
+    # // Else, change it to __SHEBANG__ and caller must change it back
+    # // later with, for example this sed: 1 {s,^__SHEBANG__,#!}.
     1 {s,^#!,__SHEBANG__,}
 
-    # // concatenate lines ending in backslash for further processing below
-    # // this will handle multiline comments or cpp directives 
+    # // Concatenate lines ending in backslash for further processing below.
+    # // This will handle multi-line comments and multi-line cpp directives.
     :x; /\\\s*$/ { N; s/\\\n//; tx }
 
-    # // map #default X Y to #ifndef X \n#define X Y\n#endif\n
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#default \1 \2\n#   ifndef \1\n#   define \1 \2\n#   endif@}
+    # // Map "#default X no" to "#ifndef X \n#define X 0\n#endif\n"
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*no($|\s.*$)@//#default \1\tno\n#   ifndef \1\n#   define \1 0\n#   endif@}
 
-    # // map #default X to #ifndef X \n#define X\n#endif\n
+    # // Map "#default X yes" to "#ifndef X \n#define X 1\n#endif\n"
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*yes($|\s.*$)@//#default \1\tyes\n#   ifndef \1\n#   define \1 1\n#   endif@}
+
+    # // Map "#default X Y" to "#ifndef X \n#define X Y\n#endif\n"
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#default \1\t\2\n#   ifndef \1\n#   define \1\t\2\n#   endif@}
+
+    # // Map "#default X" to "#ifndef X \n#define X\n#endif\n"
+    # // Not recommended in general since #ifdef X is legit code without
+    # // a #default. Use "#default X yes" with "#if X" instead to catch
+    # // missing #defaults and typos in #if or #default statements.
     {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$@//#default \1\n#   ifndef \1\n#   define \1\n#   endif@}
 
-    # // map #redefine X Y to #undef X \n#define X Y\n
+    # // Map "#redefine X Y" to "#undef X \n#define X Y\n"
     {s@^\s*#\s*redefine\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)\s\s*(.*)$@//#redefine \1\n#   undef   \1\n#   define  \1 \2@}
 
-    # // emit comment to indicate #default or #redefine was expanded
+    # // Done expanding #default or #redefine, go to next line
     /^\/\/#(default|redefine) /b
 
-    # // keep cpp directive lines (b=branch next line)
+    # // Keep cpp directive lines, go to next line
     /^\s*#\s*(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning)/b
 
-    # // keep C comment lines starting with // that have a hash
+    # // Keep C comment lines starting with // that have a hash
     /^\s*\/\/.*#/b
   #endif // CPP
   
-  # // delete lines starting with #
+  # // Delete lines starting with #
   /^[\t\ ]*#/d
 
   #ifndef BLANK
 
-    # // delete blank lines
+    # // Delete blank lines
     /\S/!d
 
   #endif // !BLANK
@@ -111,7 +120,7 @@ echo '
   "'
   #ifndef BLANK
 
-    # // delete blank lines
+    # // Delete blank lines
     /\S/!d
 
   #endif // !BLANK
