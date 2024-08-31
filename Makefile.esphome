@@ -32,12 +32,11 @@ ifeq (,$(wildcard $(ESP_MERGED)))
 esphomeTgt: cppTgt 
 	@printf "Makefile.esphome: initiating full build of $(ESP_PRJYAML)\n"
 	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
-	@printf "esphome compile $(notdir $(ESP_MERGED))"
+	@printf "esphome compile $(notdir $(ESP_MERGED))\n"
 	@cd $(dir $(ESP_PRJYAML)) &&				\
 	    esphome compile $(notdir $(ESP_MERGED)) &&		\
 	    printf "Makefile.esphome: $(CPT_BUILD_DIR) " &&	\
 	    printf "firmware.elf is up to date.\n"
-
 else
 
 # Extract the platformio project name from the generated yaml 
@@ -72,7 +71,7 @@ endif
 
 esphomeTgt: cppTgt $(ESP_FIRMWARE)
 	@if [ $(ESP_FIRMWARE) -nt $(ESP_MAIN) ]; then			\
-	   printf "Makefile.esphome: $(CPT_BUILD_DIR)...$(ESP_NAME)...";\
+	   printf "Makefile.esphome: $(ESP_NAME)...";			\
 	   printf "$(notdir $(ESP_FIRMWARE)) is up to date.\n";		\
 	fi
 
@@ -85,11 +84,11 @@ $(ESP_FIRMWARE): $(ESP_MAIN)
 	    printf "$(ESP_NAME)...main.cpp is up to date\n";		\
 	    touch -r $(ESP_OLDESP) $(ESP_MAIN);				\
         else								\
-            printf "Makefile.esphome: $(ESP_MAIN) ";			\
-	    printf "changed. Building firmware.\n";			\
-	    printf "esphome compile $(notdir $(ESP_MERGED))";		\
-	    cd $(dir $(ESP_PRJYAML)) &&					\
-	       esphome compile $(notdir $(ESP_MERGED)); status=$$?;	\
+            printf "Makefile.esphome: $(ESP_MAIN) changed\n";		\
+	    printf "Makefile.esphome: Building $(ESP_FIRMWARE)\n";	\
+	    printf "esphome compile $(notdir $(ESP_MERGED))\n";		\
+	    cd $(dir $(ESP_PRJYAML));	 				\
+	    esphome compile $(notdir $(ESP_MERGED)); status=$$?;	\
 	    cd - >/dev/null;						\
 	    if [ $$status -eq 0 ]; then					\
 	       cp -p $(ESP_MAIN) $(ESP_OLDESP);				\
@@ -99,10 +98,10 @@ $(ESP_FIRMWARE): $(ESP_MAIN)
 # Run esphome if one of the project's trigger dependencies was updated.
 
 $(ESP_MAIN):: $(ESP_DEPS) $(CPT_HOME)/Makefile.esphome
-	@printf "Makefile.esphome: Dependency $? changed. "
-	@printf "Generating $(ESP_MAIN)\n"
+	@printf "Makefile.esphome: Dependency $? changed.\n"
+	@printf "Makefile.esphome: Generating $(ESP_MAIN)\n"
 	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
-	@cd $(dir $(ESP_MERGED)) &&				    \
+	@cd $(dir $(ESP_MERGED));				    \
 	    $(ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \
 	    cd - >/dev/null;					    \
 	    if [ $$status -eq 0 ]; then				    \
@@ -115,17 +114,16 @@ $(ESP_MAIN):: $(ESP_PRJYAML)
 	$(ESP_BUILD_MORE)
 	@cmp --silent "$(ESP_OLDYAML)" "$(ESP_PRJYAML)"; status=$$?;	\
 	if [ $$status -eq 0 ]; then					\
-            printf "Makefile.esphome: $(ESP_PRJYAML) unchanged. ";	\
-	    printf "Done.\n";						\
+            printf "Makefile.esphome: $(ESP_PRJYAML) unchanged. Done.\n";\
 	    touch -r "$(ESP_OLDYAML)" "$(ESP_PRJYAML)";			\
         else								\
-            printf "Makefile.esphome: $(ESP_PRJYAML) changed. ";	\
-	    printf "Generating $(ESP_MAIN)\n";				\
+            printf "Makefile.esphome: $(ESP_PRJYAML) changed.\n";	\
+	    printf "Makefile.esphome: Generating $(ESP_MAIN)\n";	\
 	    $(CPT_HOME)/yamlmerge.sh -o "$(ESP_MERGED)" "$(ESP_PRJYAML)";\
 	    printf "$(ESP_GEN) $(notdir $(ESP_MERGED))\n";		\
-	    cd $(dir "$(ESP_MERGED)") &&				\
-		$(ESP_GEN) $(notdir "$(ESP_MERGED)"); status=$$?;	\
-	    cd - >/dev/null;						\
+	    cd $(dir $(ESP_MERGED));				    \
+	    $(ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \
+	    cd - >/dev/null;					    \
 	    if [ $$status -eq 0 ]; then					\
 	        cp -p "$(ESP_PRJYAML)" "$(ESP_OLDYAML)";		\
 	    fi;								\
