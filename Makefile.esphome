@@ -22,16 +22,17 @@ ifeq ($(shell which yq),)
 $(error "yq not found. Please install it")
 endif
 
-ESP_PRJYAML := $(CPT_BUILD_DIR)/$(ESP_INIT)
-ESP_OLDYAML := $(dir $(ESP_PRJYAML)).$(notdir $(ESP_PRJYAML)).old
-ESP_MERGED  := $(CPT_BUILD_DIR)/$(ESP_YAML)
+ESP_PRJYAML   := $(CPT_BUILD_DIR)/$(ESP_INIT)
+ESP_OLDYAML   := $(dir $(ESP_PRJYAML)).$(notdir $(ESP_PRJYAML)).old
+ESP_MERGED    := $(CPT_BUILD_DIR)/$(ESP_YAML)
+ESP_YAMLMERGE := $(CPT_HOME)/yamlmerge.sh -s -e
 
 # If this is a first time build attempt, initiate a full build
 
 ifeq (,$(wildcard $(ESP_MERGED)))
 esphomeTgt: cppTgt 
 	@printf "Makefile.esphome: initiating full build of $(ESP_PRJYAML)\n"
-	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
+	$(ESP_YAMLMERGE) -o $(ESP_MERGED) $(ESP_PRJYAML)
 	@printf "esphome compile $(notdir $(ESP_MERGED))\n"
 	@cd $(dir $(ESP_PRJYAML)) &&				\
 	    esphome compile $(notdir $(ESP_MERGED)) &&		\
@@ -100,7 +101,7 @@ $(ESP_FIRMWARE): $(ESP_MAIN)
 $(ESP_MAIN):: $(ESP_DEPS) $(CPT_HOME)/Makefile.esphome
 	@printf "Makefile.esphome: Dependency $? changed.\n"
 	@printf "Makefile.esphome: Generating $(ESP_MAIN)\n"
-	$(CPT_HOME)/yamlmerge.sh -o $(ESP_MERGED) $(ESP_PRJYAML)
+	$(ESP_YAMLMERGE) -o $(ESP_MERGED) $(ESP_PRJYAML)
 	@cd $(dir $(ESP_MERGED));				    \
 	    $(ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \
 	    cd - >/dev/null;					    \
@@ -119,7 +120,7 @@ $(ESP_MAIN):: $(ESP_PRJYAML)
         else								\
             printf "Makefile.esphome: $(ESP_PRJYAML) changed.\n";	\
 	    printf "Makefile.esphome: Generating $(ESP_MAIN)\n";	\
-	    $(CPT_HOME)/yamlmerge.sh -o "$(ESP_MERGED)" "$(ESP_PRJYAML)";\
+	    $(ESP_YAMLMERGE) -o "$(ESP_MERGED)" "$(ESP_PRJYAML)";	\
 	    printf "$(ESP_GEN) $(notdir $(ESP_MERGED))\n";		\
 	    cd $(dir $(ESP_MERGED));				    \
 	    $(ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \

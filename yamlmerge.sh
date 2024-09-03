@@ -1,9 +1,12 @@
 #!/bin/bash
 
-HELP="`basename $0` merges offending duplicate map keys in non-compliant yaml
+HELP="`basename $0` merges duplicate map keys in non-compliant yaml
 
 Usage: `basename $0` [-o outfile] <yamlfile>
   -o|--outfile\tfile to write to, else stdout
+  -k|--keep\tkeep yaml comments
+  -s|--sort\tsort the map keys after merging
+  -e|--esphome\toutput esphome: and esp32: map keys first
   -q|--quiet\tdo not output the number of merged components
 <yamlfile>\tyaml file to operate, else stdin
 
@@ -13,14 +16,19 @@ Note: This script does not vet arguments securely. Do not setuid or host it.
 
 quiet=0
 outfile=/dev/stdout
-removecomments=(yq '... comments=\"\"')
+removecomments=(yq '... comments=""')
+sortyaml=cat
+espyaml=cat
 
 while [[ $# > 0 ]]
 do
   case $1 in
-    -o|--out)	    outfile="$2"; shift 2;;
-    -c|--comments)  removecomments=cat; shift 1;;
-    -q|--quiet)	    quiet=1; shift;;
+    -o|--out)	outfile="$2"; shift 2;;
+    -k|--keep)  removecomments=cat; shift 1;;
+    -s|--sort)  sortyaml=(yq -P 'sort_keys(.)'); shift 1;;
+    -e|--esp)   espyaml=(yq 'pick((["esphome", "esp32"] + keys) | unique)'); \
+		shift 1;;
+    -q|--quiet)	quiet=1; shift;;
     *) break
   esac
 done
@@ -39,12 +47,20 @@ fi
 # characters or an underscore in column 1 and separates them into
 # distinct yaml documents by outputting '---'.
 
-# yaml comments are first removed. To keep them, use the -c option
+# yamlmerge.sh processes a single yaml files using these steps:
+#  First, yaml comments are optionally removed using yq.
+#  Then map keys are each put in their own yaml document, using awk.
+#  Then map keys are merged using yq.
+#  Then map keys are optionally sorted using yq.
 
-eval $removecomments "$yaml" |				    \
+"${removecomments[@]}" "$yaml" |			    \
     awk '/^[[:alnum:]_]/{print "---"}; {print $0}' |	    \
-    yq eval-all '. as $item ireduce ({}; . *+ $item)' > "$outfile"
+    yq eval-all '. as $item ireduce ({}; . *+ $item)' |	    \
+    "${sortyaml[@]}" | "${espyaml[@]}" > "$outfile"
+
 status=$?
+
+# Finally, optionally output how many yaml map keys were merged.
 
 ((quiet)) && exit $status
 
