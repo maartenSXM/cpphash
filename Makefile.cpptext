@@ -61,7 +61,6 @@ endif
 CPT_TMP_DIR  := $(CPT_BUILD_DIR)/$(CPT_TMP_SUBDIR)
 CPT_DEHASH   := $(CPT_HOME)/dehash.sh --cpp
 CPT_OUTFILES := $(addprefix $(CPT_BUILD_DIR)/,$(patsubst ./%,%,$(CPT_GEN)))
-CPT_OLDOUTS  := $(foreach f,$(CPT_OUTFILES),$(dir $(f)).$(notdir $(f)).old)
 
 CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_FLAGS)
 CPT_CPPINCS  := -I $(CPT_TMP_DIR) -I. $(CPT_EXTRA_INCS)
@@ -100,31 +99,31 @@ cppTgt: $(CPT_SRCS) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
 $(CPT_SRCS):
 	$(error source file $@ does not exist)
 
-# emit the rules that run cpp to generate all the CPT_OUTFILES
+# Emit the rules that run cpp to generate all the CPT_OUTFILES
+
 define cpp_rule
-$(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1) $(MAKEFILE_LIST)
+$(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1)
+	@printf "Makefile.cpptext: generating $$@ because $$? is newer\n"
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef
+$(foreach src,$(patsubst ./%,%,$(CPT_GEN)),$(eval $(call cpp_rule,$(src))))
 
-# parameters are the file to generate and a name to use to backup it up
-$(foreach src,$(patsubst ./%,%,$(CPT_GEN)), \
-    $(eval $(call cpp_rule,$(src),$(CPT_BUILD_DIR)/.$(src).old)))
+# Emit the rules that dehash the sources into the project directory
 
-# Generate the rules that dehash the sources into the project directory
 define dehash_rule
-$(CPT_TMP_DIR)/$(1): $(1) $(MAKEFILE_LIST)
+$(CPT_TMP_DIR)/$(1): $(1)
 	@printf "Dehashing to $$@\n"
 	@$(CPT_DEHASH) $$< >$$@
 endef
-
 $(foreach src,$(patsubst ./%,%,$(CPT_SRCS)),$(eval $(call dehash_rule,$(src))))
 
-# include the dependency rules generated from a previous build, if any
+# Include the dependency rules generated from a previous build, if any
+
 -include $(wildcard $(CPT_TMP_DIR)/*.d)
 
 clean: $(CPT_EXTRA_CLEAN_TGT)
-	rm -rf $(CPT_TMP_DIR) $(CPT_OUTFILES) $(CPT_OLDOUTS) $(CPT_CLEAN_FILES)
+	rm -rf $(CPT_TMP_DIR) $(CPT_OUTFILES) $(CPT_CLEAN_FILES)
 	$(CPT_CLEAN_MORE)
 
 realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)

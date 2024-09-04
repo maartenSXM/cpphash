@@ -18,119 +18,58 @@
 # generate using yamlmerge.sh, for processing by esphome and
 # platformio.
 
+SHELL=/bin/bash
+
 ifeq ($(shell which yq),)
-$(error "yq not found. Please install it")
+  $(error "yq not found. Please install it")
 endif
 
-ESP_PRJYAML   := $(CPT_BUILD_DIR)/$(ESP_INIT)
-ESP_OLDYAML   := $(dir $(ESP_PRJYAML)).$(notdir $(ESP_PRJYAML)).old
-ESP_MERGED    := $(CPT_BUILD_DIR)/$(ESP_YAML)
+# ESP_INIT is the file to run yamlmerge.sh on so that esphome
+# map keys (AKA esphome components) can be repeated.  Otherwise,
+# the yaml spec requires that only one yaml map key, such as
+# esphomes sensor: can exist.
+
+ESP_INIT ?= espinit.yaml
+
+# ESP_YAML is the output of cpptext/yamlmerge.sh which has
+# all the esphome component definitions merged together to form
+# legitimate yaml that esphome tools can parse.
+
+ESP_YAML ?= esphome.yaml
+
+ESP_BLDYAML   := $(CPT_BUILD_DIR)/$(ESP_INIT)
+ESP_GENYAML   := $(CPT_BUILD_DIR)/$(ESP_YAML)
 ESP_YAMLMERGE := $(CPT_HOME)/yamlmerge.sh -s -e
 
-# If this is a first time build attempt, initiate a full build
+# Use content changes to dependencies instead of timestamps to trigger
+# generation of esphome.yaml, main.cpp and the build firmware.elf.
+# This eliminates a lot of unecessary builds.  This scheme works by
+# only updating a .md5 file when the checksum of its corresponding file
+# actually changes.  The rules trigger builds based on the md5 file
+# timestamps, not the source file timestamps.
 
-ifeq (,$(wildcard $(ESP_MERGED)))
-esphomeTgt: cppTgt 
-	@printf "Makefile.esphome: initiating full build of $(ESP_PRJYAML)\n"
-	$(ESP_YAMLMERGE) -o $(ESP_MERGED) $(ESP_PRJYAML)
-	@printf "esphome compile $(notdir $(ESP_MERGED))\n"
-	@cd $(dir $(ESP_PRJYAML)) &&				\
-	    esphome compile $(notdir $(ESP_MERGED)) &&		\
-	    printf "Makefile.esphome: $(CPT_BUILD_DIR) " &&	\
-	    printf "firmware.elf is up to date.\n"
-else
+.SUFFIXES: .md5
+.PHONY: all
 
-# Extract the platformio project name from the generated yaml 
-# Note if the .esphome.name is changed, a make clean is needed.
+# adds .md5 suffix to file names
+md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 
-ESP_NAME := $(shell yq -r --no-doc .esphome.name $(ESP_MERGED) | grep -v null)
+# The md5 is calculated and stashed in CHECKSUM. If the  existing .md5
+# file doesn't exist or its stored md5 is different, then CHECKSUM is
+# placed in the .md5 file, which updates its timestamp.
 
-ESP_DIR	      := $(CPT_BUILD_DIR)
-ESP_PIOSUBDIR := .esphome/build/$(ESP_NAME)
-ESP_PIODIR    := $(CPT_BUILD_DIR)/$(ESP_PIOSUBDIR)
-ESP_ELFDIR    := $(ESP_PIODIR)/.pioenvs/$(ESP_NAME)
-ESP_FIRMWARE  := $(ESP_ELFDIR)/firmware.elf
-ESP_MAIN      := $(ESP_PIODIR)/src/main.cpp
-ESP_OLDESP    := $(ESP_PIODIR)/src/.main.cpp.old
-ESP_GEN	      := esphome compile --only-generate
+%.md5: %
+	@$(eval CHECKSUM := $(shell md5sum "$*"))			\
+	  $(if $(filter-out $(shell cat "$@" 2>/dev/null),$(CHECKSUM)),	\
+	    echo $(CHECKSUM) > "$@")
 
-# backed up build files don't exist after the initial build. Create them.
+esphomeTgt: cppTgt $(ESP_GENYAML)
 
-ifeq (,$(wildcard $(ESP_OLDYAML)))
-  ifneq (,$(wildcard $(ESP_PRJYAML)))
-    $(info $$(shell cp -p "$(ESP_PRJYAML)" "$(ESP_OLDYAML)"))
-    $(shell cp -p "$(ESP_PRJYAML)" "$(ESP_OLDYAML)")
-  endif
-endif
-
-ifeq (,$(wildcard $(ESP_OLDESP)))
-  ifneq (,$(wildcard $(ESP_MAIN)))
-    $(info $$(shell cp -p $(ESP_MAIN) $(ESP_OLDESP)))
-    $(shell cp -p $(ESP_MAIN) $(ESP_OLDESP))
-  endif
-endif
-
-esphomeTgt: cppTgt $(ESP_FIRMWARE)
-	@if [ $(ESP_FIRMWARE) -nt $(ESP_MAIN) ]; then			\
-	   printf "Makefile.esphome: $(ESP_NAME)...";			\
-	   printf "$(notdir $(ESP_FIRMWARE)) is up to date.\n";		\
-	fi
-
-# Skip firmware build if main.cpp is newer than firmware but unchanged
-
-$(ESP_FIRMWARE): $(ESP_MAIN)
-	@cmp --silent $(ESP_OLDESP) $(ESP_MAIN); status=$$?;		\
-	if [ $$status -eq 0 -a -f $(ESP_FIRMWARE) ]; then		\
-            printf "Makefile.esphome: $(CPT_BUILD_DIR)...";		\
-	    printf "$(ESP_NAME)...main.cpp is up to date\n";		\
-	    touch -r $(ESP_OLDESP) $(ESP_MAIN);				\
-        else								\
-            printf "Makefile.esphome: $(ESP_MAIN) changed\n";		\
-	    printf "Makefile.esphome: Building $(ESP_FIRMWARE)\n";	\
-	    printf "esphome compile $(notdir $(ESP_MERGED))\n";		\
-	    cd $(dir $(ESP_PRJYAML));	 				\
-	    esphome compile $(notdir $(ESP_MERGED)); status=$$?;	\
-	    cd - >/dev/null;						\
-	    if [ $$status -eq 0 ]; then					\
-	       cp -p $(ESP_MAIN) $(ESP_OLDESP);				\
-	    fi;								\
-	fi
-
-# Run esphome if one of the project's trigger dependencies was updated.
-
-$(ESP_MAIN):: $(ESP_DEPS) $(CPT_HOME)/Makefile.esphome
-	@printf "Makefile.esphome: Dependency $? changed.\n"
-	@printf "Makefile.esphome: Generating $(ESP_MAIN)\n"
-	$(ESP_YAMLMERGE) -o $(ESP_MERGED) $(ESP_PRJYAML)
-	@cd $(dir $(ESP_MERGED));				    \
-	    $(ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \
-	    cd - >/dev/null;					    \
-	    if [ $$status -eq 0 ]; then				    \
-	        cp -p $(ESP_PRJYAML) $(ESP_OLDYAML);		    \
-	    fi
-    
-# Skip the esphome compile if the main yaml file contents didn't change.
-
-$(ESP_MAIN):: $(ESP_PRJYAML) 
-	$(ESP_BUILD_MORE)
-	@cmp --silent "$(ESP_OLDYAML)" "$(ESP_PRJYAML)"; status=$$?;	\
-	if [ $$status -eq 0 ]; then					\
-            printf "Makefile.esphome: $(ESP_PRJYAML) unchanged. Done.\n";\
-	    touch -r "$(ESP_OLDYAML)" "$(ESP_PRJYAML)";			\
-        else								\
-            printf "Makefile.esphome: $(ESP_PRJYAML) changed.\n";	\
-	    printf "Makefile.esphome: Generating $(ESP_MAIN)\n";	\
-	    $(ESP_YAMLMERGE) -o "$(ESP_MERGED)" "$(ESP_PRJYAML)";	\
-	    printf "$(ESP_GEN) $(notdir $(ESP_MERGED))\n";		\
-	    cd $(dir $(ESP_MERGED));				    \
-	    $(ESP_GEN) $(notdir $(ESP_MERGED)); status=$$?;	    \
-	    cd - >/dev/null;					    \
-	    if [ $$status -eq 0 ]; then					\
-	        cp -p "$(ESP_PRJYAML)" "$(ESP_OLDYAML)";		\
-	    fi;								\
-	fi
-endif
-
+$(ESP_GENYAML): $(call md5,$(ESP_BLDYAML) $(ESP_DEPS))
+	@printf "Makefile.esphome: $(<F:.md5=) changed.\n"
+	$(ESP_YAMLMERGE) -o "$@" "$(<:.md5=)"
+	cd "$(@D)" && esphome compile "$(@F)"
+	
 # When generating an esphome project, we need to do some extra stuff
 # for secrets.yaml since esphome expects it to be in the same directory
 # as the esphome yaml file.  That is, in $(CPT_BUILD_DIR). So 
@@ -146,16 +85,15 @@ define ESP_BUILD_MORE
 	fi
 endef
 
-# setup Makefile.cpptext target "clean" to remove secrets.yaml if needed
-
 define CPT_CLEAN_MORE
-	rm -f $(ESP_MERGED)
+	rm -f $(ESP_GENYAML)
 	@if [ "$(CPT_BUILD_DIR)" != "." -a -f "secrets.yaml" ]; then	\
 	  if [ -L "$(CPT_BUILD_DIR)/secrets.yaml" ]; then		\
 	    echo "rm $(CPT_BUILD_DIR)/secrets.yaml";			\
 	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			\
 	  fi;								\
 	fi
+	rm -f $(sort $(ESP_MD5FILES))
 endef
 
 define print_defaults_rule
@@ -170,8 +108,9 @@ $(foreach gen,$(patsubst ./%,%,$(CPT_GEN)),		\
 
 # target "realclean" cleans .esphome from $(CPT_BUILD_DIR)
 
-CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome $(CPT_BUILD_DIR)/.gitignore
+CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome \
+			$(CPT_BUILD_DIR)/.gitignore
 
-.PHONY: esphomeTgt print-defaults
-.PRECIOUS: $(ESP_FIRMWARE) $(ESP_MAIN)
+.PHONY: esphomeTgt print-defaults espBuild
+.PRECIOUS: $(ESP_FIRMWARE)
 
