@@ -2,56 +2,49 @@
 # generated file contents, not just based on timestamps.  
 # It will skip esphome yaml generation when the yaml generated
 # by cpptext is unchanged from a previous build.  In addition,
-# It will skip running platformio to build the source generated 
-# by esphome if the generated main.cpp is the same as the previous
-# build.
+# it will skip esphome compile step to generate and build esphome
+# sources if esphome.yaml doesn't change.
 
 # The including Makefile should include Makefile.cpptext,
-# which in turn includes this file, Makefile.esphome
+# which in turn includes this file, Makefile.esphome automatically
+# when the shell is running in an esphome venv.
 
-# The including Makefile should define ESP_INIT to an
+# The including Makefile can define ESP_INIT to an
 # output of Makefile.cpptext (i.e. it is one of the generated
-# files listed in CPT_GEN.
+# files listed in CPT_GEN)  The default for ESP_INIT is "espinit.yaml".
 
-# The including Makefile should also define ESP_YAML to
-# the name of the yaml file that this Makefile fragment should
-# generate using yamlmerge.sh, for processing by esphome and
-# platformio.
+# The including Makefile can define ESP_YAML to the name of the yaml
+# file that this Makefile fragment should generate using yamlmerge.sh,
+# for processing by esphome. The default for ESP_YAML is "esphome.yaml".
+
+# This Makefile considers changes to the contents of files in addition to
+# timestamps to trigger actions.  This can eliminate unecessary builds.
+# The approach take is to only update an .md5 file when the checksum of
+# its corresponding file changes. Some rule trigger builds by considering
+# the timestamp on the md5 file rather than it's corresponding file.  This
+# allows files to have newer or older timestamps than the md5 files as long
+# as the file contents are the same as when the md5 file as created.
+
+# "make clean" removes the md5 files to enable a subsequent full esphome
+# build. "make realclean" removes the entire build directory. Use it with
+# caution if you store non-build artifacts in the build directory.
 
 SHELL=/bin/bash
 
-ifeq ($(shell which yq),)
-  $(error "yq not found. Please install it")
+ifeq ($(shell which md5sum),)
+  $(error "md5sum not found. Please install it")
 endif
 
-# ESP_INIT is the file to run yamlmerge.sh on so that esphome
-# map keys (AKA esphome components) can be repeated.  Otherwise,
-# the yaml spec requires that only one yaml map key, such as
-# esphomes sensor: can exist.
-
-ESP_INIT ?= espinit.yaml
-
-# ESP_YAML is the output of cpptext/yamlmerge.sh which has
-# all the esphome component definitions merged together to form
-# legitimate yaml that esphome tools can parse.
-
-ESP_YAML ?= esphome.yaml
-
+ESP_INIT      ?= espinit.yaml
+ESP_YAML      ?= esphome.yaml
 ESP_BLDYAML   := $(CPT_BUILD_DIR)/$(ESP_INIT)
 ESP_GENYAML   := $(CPT_BUILD_DIR)/$(ESP_YAML)
 ESP_YAMLMERGE := $(CPT_HOME)/yamlmerge.sh -s -e
 
-# Use content changes to dependencies instead of timestamps to trigger
-# generation of esphome.yaml, main.cpp and the build firmware.elf.
-# This eliminates a lot of unecessary builds.  This scheme works by
-# only updating a .md5 file when the checksum of its corresponding file
-# actually changes.  The rules trigger builds based on the md5 file
-# timestamps, not the source file timestamps.
-
 .SUFFIXES: .md5
 .PHONY: all
 
-# adds .md5 suffix to file names
+# adds .md5 suffix to file names and record them for "make clean"
 md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 
 # The md5 is calculated and stashed in CHECKSUM. If the  existing .md5
@@ -65,6 +58,7 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 
 esphomeTgt: cppTgt $(ESP_GENYAML)
 
+# The file contents, not timestamps, are used as dependencies in this rule.
 $(ESP_GENYAML): $(call md5,$(ESP_BLDYAML) $(ESP_DEPS))
 	@printf "Makefile.esphome: $(<F:.md5=) changed.\n"
 	$(ESP_YAMLMERGE) -o "$@" "$(<:.md5=)"
@@ -86,31 +80,19 @@ define ESP_BUILD_MORE
 endef
 
 define CPT_CLEAN_MORE
-	rm -f $(ESP_GENYAML)
+	xargs rm -f $(ESP_GENYAML) $(sort $(ESP_MD5FILES))
 	@if [ "$(CPT_BUILD_DIR)" != "." -a -f "secrets.yaml" ]; then	\
 	  if [ -L "$(CPT_BUILD_DIR)/secrets.yaml" ]; then		\
 	    echo "rm $(CPT_BUILD_DIR)/secrets.yaml";			\
 	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			\
 	  fi;								\
 	fi
-	rm -f $(sort $(ESP_MD5FILES))
 endef
 
-define print_defaults_rule
-print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
-	@printf "Default values for $(1)\n"
-	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) |		\
-		grep '^//#default' | sed 's/^../  /'
-endef
+# In addition to executing a "make clean", "make realclean"
+# additionally cleans the builds .esphome directory and its log files
 
-$(foreach gen,$(patsubst ./%,%,$(CPT_GEN)),		\
-    $(eval $(call print_defaults_rule,$(gen))))
+CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome $(CPT_BUILD_DIR)/*.log
 
-# target "realclean" cleans .esphome from $(CPT_BUILD_DIR)
-
-CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome \
-			$(CPT_BUILD_DIR)/.gitignore
-
-.PHONY: esphomeTgt print-defaults espBuild
-.PRECIOUS: $(ESP_FIRMWARE)
+.PHONY: esphomeTgt espBuild
 

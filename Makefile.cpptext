@@ -81,7 +81,7 @@ $(shell mkdir -p $(CPT_MKDIRS))
 ifeq (,$(CPT_NO_ESPHOME))
   # include Makefile.esphome if an esphome virtual environment is active
   ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
-    # espHomeTgt is defined in Makefile.esphome
+    # esphomeTgt is defined in Makefile.esphome
     CPT_MAIN_TGT = esphomeTgt
     include $(CPT_HOME)/Makefile.esphome
   endif
@@ -136,7 +136,17 @@ realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
 	rm -rf $(CPT_TMP_DIR) $(CPT_REALCLEAN_FILES)
 	$(CPT_REALCLEAN_MORE)
 
+define print_defaults_rule
+print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
+	@printf "Default values for $(1)\n"
+	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) | \
+		grep '^//#default' | sed 's/^../  /'
+endef
+
+$(foreach gen,$(patsubst ./%,%,$(CPT_GEN)), \
+    $(eval $(call print_defaults_rule,$(gen))))
+
 .PRECIOUS: $(CPT_TMP_DIR) $(CPT_BUILD_DIR) $(CPT_HOME)
-.PHONY: all clean realclean mkdirs cppTgt \
+.PHONY: all clean realclean mkdirs cppTgt print-defaults \
 		    $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT)
 
