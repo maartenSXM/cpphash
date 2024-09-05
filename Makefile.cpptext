@@ -90,7 +90,7 @@ endif
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
 define uptodate
-  printf "Makefile.cpptext: $(CPT_BUILD_DIR)/$(1) is up to date\n";
+  printf "Makefile.cpptext: $(1) is up to date.\n";
 endef
 
 cppTgt: $(CPT_SRCS) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
