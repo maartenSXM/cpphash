@@ -53,9 +53,9 @@ fi
 #  Then map keys are merged using yq.
 #  Then map keys are optionally sorted using yq.
 
-"${removecomments[@]}" "$yaml" |			    \
-    awk '/^[[:alnum:]_]/{print "---"}; {print $0}' |	    \
-    yq eval-all '. as $item ireduce ({}; . *+ $item)' |	    \
+"${removecomments[@]}" "$yaml"			      |	\
+    awk '/^[[:alnum:]_]/{print "---"}; {print $0}'    |	\
+    yq eval-all '. as $item ireduce ({}; . *+ $item)' |	\
     "${sortyaml[@]}" | "${espyaml[@]}" > "$outfile"
 
 status=$?

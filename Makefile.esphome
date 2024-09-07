@@ -57,6 +57,7 @@ esphomeTgt: cppTgt $(ESP_MAIN)
 $(ESP_MAIN): $(call md5,$(ESP_GEN) $(ESP_DEPS))
 	@printf "Makefile.esphome: $(<F:.md5=) changed.\n"
 	$(ESP_MERGE) -o "$@" "$(<:.md5=)"
+	$(ESP_BUILD_MORE)
 	cd "$(@D)" && esphome compile "$(@F)"
 	
 # When generating an esphome project, we need to do some extra stuff
@@ -66,11 +67,9 @@ $(ESP_MAIN): $(call md5,$(ESP_GEN) $(ESP_DEPS))
 
 define ESP_BUILD_MORE
 	@if [ "$(CPT_BUILD_DIR)" != "." -a -f secrets.yaml ]; then	    \
-	  if [ -L "$(CPT_BUILD_DIR)/secrets.yaml" ]; then		    \
 	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			    \
-	  fi;								    \
-	  echo "Makefile.esphome: linking $(CPT_BUILD_DIR)/secrets.yaml";   \
-	  ln -s secrets.yaml $(CPT_BUILD_DIR)/secrets.yaml;		    \
+	    printf "Makefile.esphome: copy secrets to the build dir.\n";    \
+	    cp ./secrets.yaml $(CPT_BUILD_DIR)/secrets.yaml;		    \
 	fi
 endef
 
@@ -85,10 +84,8 @@ define CPT_CLEAN_MORE
 	@xargs -t -a $(ESP_CLEAN) rm -f
 	@rm -f $(ESP_CLEAN)
 	@if [ "$(CPT_BUILD_DIR)" != "." -a -f secrets.yaml ]; then	\
-	  if [ -L "$(CPT_BUILD_DIR)/secrets.yaml" ]; then		\
 	    echo "rm $(CPT_BUILD_DIR)/secrets.yaml";			\
 	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			\
-	  fi;								\
 	fi
 endef
 
