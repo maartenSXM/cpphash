@@ -73,7 +73,9 @@ CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS)
 CPT_TMP_SRCS = $(addprefix $(CPT_TMP_DIR)/,$(patsubst ./%,%,$(CPT_SRCS)))
 
 # create all build directories (sort filters duplicates)
-CPT_MKDIRS := $(sort $(CPT_BUILD_DIR) $(CPT_TMP_DIR) $(dir $(CPT_TMP_SRCS)))
+CPT_MKDIRS := $(sort $(CPT_BUILD_DIR)					 \
+		     $(CPT_TMP_DIR)					 \
+		     $(dir $(CPT_TMP_SRCS)))
 
 $(shell mkdir -p $(CPT_MKDIRS))
 
@@ -103,7 +105,7 @@ $(CPT_SRCS):
 
 define cpp_rule
 $(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1)
-	@printf "Makefile.cpptext: generating $$@ because $$? is newer\n"
+	@mkdir -p $(dir $(CPT_TMP)/$(1))
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef
