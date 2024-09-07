@@ -105,7 +105,7 @@ $(CPT_SRCS):
 
 define cpp_rule
 $(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1)
-	@mkdir -p $(dir $(CPT_TMP)/$(1))
+	@mkdir -p $(dir $(CPT_TMP_DIR)/$(1))
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef
