@@ -1,4 +1,4 @@
-# This makefile will skip esphome yaml compilation when esphome.yaml 
+# This makefile will skip espmake.yaml compilation when espmake.yaml 
 # is unchanged from a previous build.
 
 # The including Makefile should include Makefile.cpptext, which in turn
@@ -6,11 +6,11 @@
 
 # The including Makefile can define ESP_INIT to an output of
 # Makefile.cpptext (i.e. it is one of the generated files listed
-# in CPT_GEN). The default for ESP_INIT is "espinit.yaml".
+# in CPT_GEN). The default for ESP_INIT is "esphome.yaml".
 
 # The including Makefile can also define ESP_YAML to the name of the yaml
 # file that this Makefile should generate using yamlmerge.sh, for processing
-# by esphome. The default for ESP_YAML is "esphome.yaml".
+# by esphome. The default for ESP_YAML is "espmake.yaml".
 
 # In order to avoid unecessary build, this Makefile considers changes to
 # the contents of files in addition to timestamps to trigger actions.
@@ -29,8 +29,8 @@ ifeq ($(shell which md5sum),)
   $(error "md5sum not found. Please install it")
 endif
 
-ESP_INIT  ?= espinit.yaml
-ESP_YAML  ?= esphome.yaml
+ESP_INIT  ?= esphome.yaml
+ESP_YAML  ?= espmake.yaml
 ESP_GEN   := $(CPT_BUILD_DIR)/$(ESP_INIT)
 ESP_MAIN  := $(CPT_BUILD_DIR)/$(ESP_YAML)
 ESP_MERGE := $(CPT_HOME)/yamlmerge.sh -s -e

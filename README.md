@@ -157,7 +157,7 @@ YMMV.
 
 Thank you to Landon Rohatensky for the exemplary esphome yaml file
 https://github.com/landonr/lilygo-tdisplays3-esphome used to demonstrate
-espmake configuration & build and also as used in the test subdirectory.
+configuration & build and also as used in the test subdirectory.
 
 # Disclaimers
 

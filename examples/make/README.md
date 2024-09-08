@@ -22,12 +22,12 @@ can set MAIN=xxx.yyy either on the make command line or in ./Makefile
 ### config.h
 
 An example of how to configure esphome software using #define. Such a file
-can be #included both by esphome yaml files and by C/C++ code.
+can be #included both by espmake.yaml files and by C/C++ code.
 
 ### pins.h
 
 An example of how to configure esphome hardware using #define. Such a file
-can be #included both by esphome yaml files and by C/C++ code.
+can be #included both by espmake.yaml files and by C/C++ code.
 
 ### secrets.yaml
 Since the example is an esphome project that used esphome's !secrets feature,

@@ -6,4 +6,5 @@ example/cpptext
 examples/README.md
 examples/test/.esphome/
 examples/make/.esphome/
+*.bak
 
