@@ -60,19 +60,6 @@ $(ESP_MAIN): $(call md5,$(ESP_GEN) $(ESP_DEPS))
 	$(ESP_BUILD_MORE)
 	cd "$(@D)" && esphome compile "$(@F)"
 	
-# When generating an esphome project, we need to do some extra stuff
-# for secrets.yaml since esphome expects it to be in the same directory
-# as the esphome yaml file.  That is, in $(CPT_BUILD_DIR). So 
-# the build and clean targets are extended to handle that.
-
-define ESP_BUILD_MORE
-	@if [ "$(CPT_BUILD_DIR)" != "." -a -f secrets.yaml ]; then	    \
-	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			    \
-	    printf "Makefile.esphome: copy secrets to the build dir.\n";    \
-	    cp ./secrets.yaml $(CPT_BUILD_DIR)/secrets.yaml;		    \
-	fi
-endef
-
 # Since ESP_MD5FILES can be a long list, avoid blowing ARG_MAX by
 # stashing the filenames in a temporary file and passing it to xargs.
 
@@ -83,9 +70,8 @@ define CPT_CLEAN_MORE
 	    $(file >>$(ESP_CLEAN),$(f)))
 	@xargs -t -a $(ESP_CLEAN) rm -f
 	@rm -f $(ESP_CLEAN)
-	@if [ "$(CPT_BUILD_DIR)" != "." -a -f secrets.yaml ]; then	\
-	    echo "rm $(CPT_BUILD_DIR)/secrets.yaml";			\
-	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;			\
+	@if [ -f $(CPT_BUILD_DIR)/secrets.yaml ]; then			\
+	    xargs -a /dev/null -t rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
 	fi
 endef
 

@@ -55,11 +55,12 @@ ifeq (,$(findstring GNU,$(shell sed --version)))
 endif
 
 ifeq ($(CPT_BUILD_DIR),.)
-  $(error "CPT_BUILD_DIR is set to . not supported.")
+  $(error "CPT_BUILD_DIR set to . is not supported.")
 endif
 
 CPT_TMP_DIR  := $(CPT_BUILD_DIR)/$(CPT_TMP_SUBDIR)
 CPT_DEHASH   := $(CPT_HOME)/dehash.sh --cpp
+CPT_INFILES  := $(sort $(patsubst ./%,%,$(CPT_SRCS)))
 CPT_OUTFILES := $(addprefix $(CPT_BUILD_DIR)/,$(patsubst ./%,%,$(CPT_GEN)))
 
 CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_FLAGS)
@@ -70,12 +71,11 @@ CPT_CPPDEFS  := -D CPT_USER_$(USER)=1	\
 CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
 
 # CPT_TMP_SRCS is the list of dehashed files in CPT_TMP_DIR
-CPT_TMP_SRCS = $(addprefix $(CPT_TMP_DIR)/,$(patsubst ./%,%,$(CPT_SRCS)))
+CPT_TMP_SRCS = $(addprefix $(CPT_TMP_DIR)/, \
+		 $(sort $(patsubst ./%,%,$(CPT_INFILES))))
 
 # create all build directories (sort filters duplicates)
-CPT_MKDIRS := $(sort $(CPT_BUILD_DIR)					 \
-		     $(CPT_TMP_DIR)					 \
-		     $(dir $(CPT_TMP_SRCS)))
+CPT_MKDIRS := $(sort $(CPT_BUILD_DIR) $(CPT_TMP_DIR) $(dir $(CPT_TMP_SRCS)))
 
 $(shell mkdir -p $(CPT_MKDIRS))
 
@@ -91,33 +91,34 @@ endif
 
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
-define uptodate
+define _uptodate
   printf "Makefile.cpptext: $(1) is up to date.\n";
 endef
 
-cppTgt: $(CPT_SRCS) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
-	@$(foreach tgt,$(notdir $(CPT_OUTFILES)),$(call uptodate,$(tgt)))
+cppTgt: $(CPT_INFILES) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
+	@$(foreach tgt,$(notdir $(CPT_OUTFILES)),$(call _uptodate,$(tgt)))
 
-$(CPT_SRCS):
+$(CPT_INFILES):
 	$(error source file $@ does not exist)
 
 # Emit the rules that run cpp to generate all the CPT_OUTFILES
 
-define cpp_rule
+define _cpp
 $(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1)
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef
-$(foreach src,$(patsubst ./%,%,$(CPT_GEN)),$(eval $(call cpp_rule,$(src))))
+$(foreach src,$(patsubst ./%,%,$(CPT_GEN)),$(eval $(call _cpp,$(src))))
 
 # Emit the rules that dehash the sources into the project directory
 
-define dehash_rule
+define _dehash
 $(CPT_TMP_DIR)/$(1): $(1)
 	@printf "Dehashing to $$@\n"
 	@$(CPT_DEHASH) $$< >$$@
 endef
-$(foreach src,$(patsubst ./%,%,$(CPT_SRCS)),$(eval $(call dehash_rule,$(src))))
+
+$(foreach src,$(patsubst ./%,%,$(CPT_INFILES)), $(eval $(call _dehash,$(src))))
 
 # Include the dependency rules generated from a previous build, if any
 
@@ -131,13 +132,12 @@ realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
 	-@if [ "`git -C $(CPT_HOME) status --porcelain`" != "" ]; then	\
 		printf "$(CPT_HOME) not porcelain. Leaving it.\n";	\
 	else								\
-		printf "rm -rf $(CPT_HOME)\n";				\
-		rm -rf $(CPT_HOME);					\
+		xargs -a /dev/null -t rm -rf $(CPT_HOME);		\
 	fi
 	rm -rf $(CPT_TMP_DIR) $(CPT_REALCLEAN_FILES)
 	$(CPT_REALCLEAN_MORE)
 
-define print_defaults_rule
+define _print_defaults
 print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
 	@printf "Default values for $(1)\n"
 	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) | \
@@ -145,7 +145,7 @@ print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
 endef
 
 $(foreach gen,$(patsubst ./%,%,$(CPT_GEN)), \
-    $(eval $(call print_defaults_rule,$(gen))))
+    $(eval $(call _print_defaults,$(gen))))
 
 .PRECIOUS: $(CPT_TMP_DIR) $(CPT_BUILD_DIR) $(CPT_HOME)
 .PHONY: all clean realclean mkdirs cppTgt print-defaults \
