@@ -63,10 +63,12 @@ CPT_DEHASH   := $(CPT_HOME)/dehash.sh --cpp
 CPT_INFILES  := $(sort $(patsubst ./%,%,$(CPT_SRCS)))
 CPT_OUTFILES := $(addprefix $(CPT_BUILD_DIR)/,$(patsubst ./%,%,$(CPT_GEN)))
 
-CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc $(CPT_EXTRA_FLAGS)
-CPT_CPPINCS  := -I $(CPT_TMP_DIR) -I. $(CPT_EXTRA_INCS)
-CPT_CPPDEFS  := -D CPT_USER_$(USER)=1	\
-	        -D CPT_USER=$(USER)	\
+CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc \
+		 $(CPT_EXTRA_FLAGS)
+CPT_CPPINCS  := -I $(CPT_TMP_DIR)			    \
+		$(foreach inc,$(CPT_GEN),-I $(dir $(inc)))  \
+		$(CPT_EXTRA_INCS)
+CPT_CPPDEFS  := -D CPT_USER_$(USER)=1 -D CPT_USER=$(USER)   \
 		$(CPT_EXTRA_DEFS)
 CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
 
@@ -75,7 +77,10 @@ CPT_TMP_SRCS = $(addprefix $(CPT_TMP_DIR)/, \
 		 $(sort $(patsubst ./%,%,$(CPT_INFILES))))
 
 # create all build directories (sort filters duplicates)
-CPT_MKDIRS := $(sort $(CPT_BUILD_DIR) $(CPT_TMP_DIR) $(dir $(CPT_TMP_SRCS)))
+CPT_MKDIRS := $(sort $(CPT_BUILD_DIR)		\
+		     $(CPT_TMP_DIR)		\
+		     $(dir $(CPT_TMP_SRCS))	\
+		     $(dir $(CPT_OUTFILES)))
 
 $(shell mkdir -p $(CPT_MKDIRS))
 

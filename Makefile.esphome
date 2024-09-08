@@ -50,7 +50,7 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 .PHONY: esphomeTgt
 
 esphomeTgt: cppTgt $(ESP_MAIN)
-	@printf "Makefile.esphome: $(notdir $(ESP_MAIN)) build is up to date.\n"
+	@printf "Makefile.esphome: project $(CPT_BUILD_DIR) is up to date.\n"
 
 # File contents (not timestamps) are used as dependencies in this rule.
 
