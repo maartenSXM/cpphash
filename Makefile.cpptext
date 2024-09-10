@@ -65,11 +65,22 @@ CPT_OUTFILES := $(addprefix $(CPT_BUILD_DIR)/,$(patsubst ./%,%,$(CPT_GEN)))
 
 CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc \
 		 $(CPT_EXTRA_FLAGS)
-CPT_CPPINCS  := -I $(CPT_TMP_DIR)			    \
-		$(foreach inc,$(CPT_GEN),-I $(dir $(inc)))  \
-		$(CPT_EXTRA_INCS)
-CPT_CPPDEFS  := -D CPT_USER_$(USER)=1 -D CPT_USER=$(USER)   \
-		$(CPT_EXTRA_DEFS)
+
+# setup #includes so that all dehashed source directories come first,
+# followed by all source directories. Thus, includes of yaml files will
+# include the dehashes variants of the file and includes of non-yaml
+# files such as images will come from the source tree.
+
+CPT_CPPINCS   := -I $(CPT_TMP_DIR)					\
+	         $(foreach d,$(patsubst %/,%,				\
+		   $(sort $(dir $(CPT_SRCS)))),-I $(CPT_TMP_DIR)/$(d))	\
+	         $(foreach d,$(patsubst %/,%,				\
+		   $(sort $(dir $(CPT_SRCS)))),-I $(d))			\
+		 $(CPT_EXTRA_INCS)
+
+CPT_CPPDEFS   := -D CPT_USER_$(USER)=1 -D CPT_USER=$(USER)   \
+	       $(CPT_EXTRA_DEFS)
+
 CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
 
 # CPT_TMP_SRCS is the list of dehashed files in CPT_TMP_DIR

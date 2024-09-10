@@ -1,4 +1,5 @@
 #!/bin/bash
+cpptextDir=$(dirname "$0")
 
 HELP="`basename $0` merges duplicate map keys in non-compliant yaml
 
@@ -7,6 +8,7 @@ Usage: `basename $0` [-o outfile] <yamlfile>
   -k|--keep\tkeep yaml comments
   -s|--sort\tsort the map keys after merging
   -e|--esphome\toutput esphome: and esp32: map keys first
+  -E|--espmerge\tenable merging of esphome array elements by id: reference
   -q|--quiet\tdo not output the number of merged components
 <yamlfile>\tyaml file to operate, else stdin
 
@@ -19,6 +21,7 @@ outfile=/dev/stdout
 removecomments=(yq '... comments=""')
 sortyaml=cat
 espyaml=cat
+espmerge=cat
 
 while [[ $# > 0 ]]
 do
@@ -28,6 +31,7 @@ do
     -s|--sort)  sortyaml=(yq -P 'sort_keys(.)'); shift 1;;
     -e|--esp)   espyaml=(yq 'pick((["esphome", "esp32"] + keys) | unique)'); \
 		shift 1;;
+    -E|--espmerge) espmerge="${cpptextDir}/espmerge.sh"; shift 1;;
     -q|--quiet)	quiet=1; shift;;
     *) break
   esac
@@ -55,6 +59,7 @@ fi
 
 "${removecomments[@]}" "$yaml"			      |	\
     awk '/^[[:alnum:]_]/{print "---"}; {print $0}'    |	\
+    $espmerge					      | \
     yq eval-all '. as $item ireduce ({}; . *+ $item)' |	\
     "${sortyaml[@]}" | "${espyaml[@]}" > "$outfile"
 
