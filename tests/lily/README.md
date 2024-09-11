@@ -5,7 +5,7 @@ and build an esphome project
 
 ./makefile and ./Makefile linked directly ../..
 ./Makefile was editted to uncomment the line that
-includes cpptext/Makefile.esphome.
+includes cpptext/esphome.mk.
 
 ## files
 

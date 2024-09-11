@@ -15,21 +15,17 @@ endif
 MAKE            := $(MAKE) --no-print-directory
 MAKEFILE        := $(lastword $(MAKEFILE_LIST))
 
-ifeq (,$(ESPMAKE_HOME))
-  $(info Makefile: please define ESPMAKE_HOME to use this Makefile.)
-  $(error Makefile: Refer to $(ESPMAKE_HOME)/Bashrc for details.)
-endif
+# Get cpptext when this Makefile has been copied out of cpptext
+# *and* we are run from an example inside cpptext
 
-# Get cpptext.
-
-ifeq (,$(wildcard $(ESPMAKE_HOME)/cpptext/.git))
+ifeq (,$(wildcard cpptext/cpptext.mk)$(wildcard cpptext.mk))
   ifneq (,$(BAIL))
     $(error $(MAKEFILE): make loop detected. Bailing out.)
   endif
 
 $(MAKECMDGOALS): 
-	cd $(ESPMAKE_HOME) && git clone git@github.com:maartenSXM/cpptext
-	cd $(ESPMAKE_HOME) && cpptext && git checkout main
+	git clone https://github.com/maartenSXM/cpptext.git
+	cd cpptext && git checkout main
 	@printf "$(MAKEFILE): Restarting \"make $(MAKECMDGOALS)\"\n"
 	@$(MAKE) BAIL=1 $(MAKECMDGOALS)
 else
@@ -38,15 +34,19 @@ else
 
 PRJ ?= ./esphome.yaml
 
+# choose CPT_HOME from ./cpptext and .
+CPT_HOME := $(patsubst %/,%, \
+	    $(dir $(wildcard cpptext/cpptext.mk)$(wildcard ./cpptext.mk)))
+
 # Check if PRJ= was specified on the command line to select a project.
 ifneq (,$(PRJ))
   ifeq (,$(wildcard $(PRJ)))	    # check specified espmake project exists
     $(error $(MAKEFILE): $(PRJ) not found)
   endif
-  $(shell echo $(PRJ) > $(ESPMAKE_HOME)/.espmake_project)
+  $(shell echo $(PRJ) > .espmake_project)
 else
-  ifneq (,$(wildcard $(ESPMAKE_HOME)/.espmake_project))
-    PRJ := $(shell cat $(ESPMAKE_HOME)/.espmake_project)
+  ifneq (,$(wildcard .espmake_project))
+    PRJ := $(shell cat .espmake_project)
   else
     ifeq (,$(wildcard $(ESP_INIT)))
       $(error $(MAKEFILE): ESP_INIT not found)
@@ -60,7 +60,7 @@ ifeq (,$(wildcard $(PRJ))) # check specified initial file exists
     $(error $(MAKEFILE): Perhaps run this in the example directory?)
 endif
 
-# set the variable that cpptext/Makefile.cpptext uses
+# set the variable that cpptext/cpptext.mk uses
 ESP_INIT = $(PRJ)
 
 ESPMAKE_PRJ_PATH = $(PRJ)
@@ -68,11 +68,11 @@ ESPMAKE_PRJ_DIR  = $(patsubst %/,%,$(dir $(PRJ)))
 ESPMAKE_PROJECT  = $(basename $(notdir $(ESPMAKE_PRJ_PATH)))
 
 # CPT_BUILD_DIR is where espmake projects are built.  It can be changed here.
-# the depth of CPT_BUILD_DIR changes. Refer to the ESPMAKE_HOME comments below
+# the depth of CPT_BUILD_DIR changes. Refer to the CPT_HOME comments below
 # for more details.
 
 CPT_BUILD_DIR = $(shell realpath --relative-to=$(CURDIR) \
-		            $(ESPMAKE_HOME)/build/$(ESPMAKE_PROJECT))
+		            build/$(ESPMAKE_PROJECT))
 ESPMAKE_BUILD_LOG = $(CPT_BUILD_DIR)/makeall.log
 
 # restart 'make all' with logging to $(CPT_BUILD_DIR)/build.log and console
@@ -152,10 +152,10 @@ CPT_EXTRA_DEFS += -D ESPMAKE_HOME=../..				\
 # are reproducable regardless of where they are built.
 
 # This includes the cpptext Makefile fragment that will dehash yamls files.
-# In turn, it will include cpptext/Makefile.esphome which handles the esphome
+# In turn, it will include cpptext/esphome.mk which handles the esphome
 # file generation and platformio build steps.
 
-include $(ESPMAKE_HOME)/cpptext/Makefile.cpptext
+include $(CPT_HOME)/cpptext.mk
 
 print-config:: $(ESP_INIT)
 	@printf "Makefile variables as processed by cpptext:\n"
@@ -179,4 +179,3 @@ endif
 # This last endif is needed from the git submodule install check above
 
 endif
-

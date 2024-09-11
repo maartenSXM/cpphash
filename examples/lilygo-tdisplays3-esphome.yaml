@@ -1,5 +1,5 @@
 // note there is a binary sensor delcared later also
-// cpptext/Makefile.esphome will merge them.
+// cpptext/esphome.mk will merge them.
 
 binary_sensor:
   - platform: gpio

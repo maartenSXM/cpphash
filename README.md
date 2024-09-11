@@ -108,7 +108,7 @@ the directories dpecified by DIRS
 
 ### PREFIX
 
-Makefile.cpptext generates a single filename named <PREFIX><PROJTAG>.
+cpptext.mk generates a single filename named <PREFIX><PROJTAG>.
 PREFIX defaults to "./myProj_"
 
 ### PROJTAG
@@ -126,11 +126,11 @@ text sources can vary the generated file using #if directives such as:
 # yaml code only for project foo goes here
 #endif
 Some other C preprocessor defines are passed as well.  They can be
-found by reviewing the CPPDEFS definition in cpptext/Makefile.cpptext.
+found by reviewing the CPPDEFS definition in cpptext/cpptext.mk.
 ```
 
 ## Generated files
-Makefile.cpptext generates output file <OUTDIR>/<PREFIX><PROJTAG>.<SUFFIX>
+cpptext.mk generates output file <OUTDIR>/<PREFIX><PROJTAG>.<SUFFIX>
 Intermediate C-preprocessed files used to generate it are stored in
 directory <OUTDIR>/<PREFIX><PROJTAG>/
 
@@ -141,7 +141,7 @@ Both can be deleted using 'make clean'.
 There are some additional comments describing cpptest features in
 Makefile.
 
-You will note that Makefile.cpptext uses dehash.sh to remove the
+You will note that cpptext.mk uses dehash.sh to remove the
 hash-style comments before running the files through the c-preprocessor.
 It leverages a sed script to do that and sets up dehash.sh flags 
 to leave the C preprocessor directives.
@@ -149,7 +149,7 @@ to leave the C preprocessor directives.
 There are some aliases in file Bashrc also which may be helpful for
 issuing esphome commands.
 
-There is an optional Makefile.esphome that may be useful to those
+There is an optional esphome.mk that may be useful to those
 using this project with esphome projects, such as the example project.
 YMMV.
 

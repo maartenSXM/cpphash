@@ -87,7 +87,7 @@ declare is_id='^[[:blank:]]+id:[[:blank:]]+(.+)$'
 # It is advised to preprocess the esphome yaml with
 # yq '... comments=""' esphome.yaml | awk '/^[[:alnum:]_]/{print "---"}
 # before piping it into espmerge.yaml.  See yamlmerge.sh which invokes
-# espmerge.sh and also Makefile.esphome which invokes yamlmerge.sh.
+# espmerge.sh and also esphome.mk which invokes yamlmerge.sh.
 
 read_lines () {
   local n=0

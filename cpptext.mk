@@ -1,4 +1,4 @@
-# Makefile.cpptext is from https://github.com/maartenSXM/cpptext.
+# cpptext.mk is from https://github.com/maartenSXM/cpptext.
 #
 # This file is intended to be included from your project Makefile and
 # depends on $(CPT_HOME) being a git clone of github.com/maartenSXM/cpptext.
@@ -15,7 +15,7 @@ MAKEFLAGS    += --no-builtin-variables
 MAKECMDGOALS ?= all
 
 # These can be optionally overridden in a project Makefile that
-# includes this Makefile.cpptext file. 
+# includes this cpptext.mk file. 
 
 # set some defaults for unset simply expanded variables
 
@@ -99,20 +99,20 @@ CPT_MKDIRS := $(sort $(CPT_BUILD_DIR)		\
 
 $(shell mkdir -p $(CPT_MKDIRS))
 
-# skip include of Makefile.esphome by defining CPT_NO_ESPHOME to non-empty
+# skip include of esphome.mk by defining CPT_NO_ESPHOME to non-empty
 ifeq (,$(CPT_NO_ESPHOME))
-  # include Makefile.esphome if an esphome virtual environment is active
+  # include esphome.mk if an esphome virtual environment is active
   ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
-    # esphomeTgt is defined in Makefile.esphome
+    # esphomeTgt is defined in esphome.mk
     CPT_MAIN_TGT = esphomeTgt
-    include $(CPT_HOME)/Makefile.esphome
+    include $(CPT_HOME)/esphome.mk
   endif
 endif
 
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
 define _uptodate
-  printf "Makefile.cpptext: $(1) is up to date.\n";
+  printf "cpptext.mk: $(1) is up to date.\n";
 endef
 
 cppTgt: $(CPT_INFILES) $(CPT_OUTFILES)

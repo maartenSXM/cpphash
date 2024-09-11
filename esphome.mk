@@ -1,11 +1,11 @@
 # This makefile will skip espmake.yaml compilation when espmake.yaml 
 # is unchanged from a previous build.
 
-# The including Makefile should include Makefile.cpptext, which in turn
+# The including Makefile should include cpptext.mk, which in turn
 # includes this file automatically, when make runs in an esphome venv.
 
 # The including Makefile can define ESP_INIT to an output of
-# Makefile.cpptext (i.e. it is one of the generated files listed
+# cpptext.mk (i.e. it is one of the generated files listed
 # in CPT_GEN). The default for ESP_INIT is "esphome.yaml".
 
 # The including Makefile can also define ESP_YAML to the name of the yaml
@@ -50,12 +50,12 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 .PHONY: esphomeTgt
 
 esphomeTgt: cppTgt $(ESP_MAIN)
-	@printf "Makefile.esphome: project $(CPT_BUILD_DIR) is up to date.\n"
+	@printf "esphome.mk: project $(CPT_BUILD_DIR) is up to date.\n"
 
 # File contents (not timestamps) are used as dependencies in this rule.
 
 $(ESP_MAIN): $(call md5,$(ESP_GEN) $(ESP_DEPS))
-	@printf "Makefile.esphome: $(<F:.md5=) changed.\n"
+	@printf "esphome.mk: $(<F:.md5=) changed.\n"
 	$(ESP_MERGE) -o "$@" "$(<:.md5=)"
 	$(ESP_BUILD_MORE)
 ifeq ($(ESP_NOCOMPILE),1)
