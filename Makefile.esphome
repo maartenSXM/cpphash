@@ -58,7 +58,11 @@ $(ESP_MAIN): $(call md5,$(ESP_GEN) $(ESP_DEPS))
 	@printf "Makefile.esphome: $(<F:.md5=) changed.\n"
 	$(ESP_MERGE) -o "$@" "$(<:.md5=)"
 	$(ESP_BUILD_MORE)
+ifeq ($(ESP_NOCOMPILE),1)
+	cd "$(@D)" && esphome config "$(@F)"
+else
 	cd "$(@D)" && esphome compile "$(@F)"
+endif
 	
 # Since ESP_MD5FILES can be a long list, avoid blowing ARG_MAX by
 # stashing the filenames in a temporary file and passing it to xargs.

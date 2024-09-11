@@ -55,7 +55,7 @@ touchscreen:
 END
 
 verbose=0
-chatty=1
+chatty=0
 
 declare nlines=0	# number of input lines read 
 declare nwork=0		# number of work items (line blocks) to merge
@@ -158,8 +158,7 @@ id_record () {
     id_spaces[$id]="$spaces"
   else
     if [[ "${id_spaces[$id]}" == "$spaces" ]]; then
-      ((chatty)) && \
-		echo "$me: merging lines ${from}-$to to $lookup_to for $id" >&2
+      echo "$me: merging lines ${from}-$to to $lookup_to for $id" >&2
       work_from[$nwork]=$from
       work_to[$nwork]=$to
       work_dest[$nwork]=$lookup_to

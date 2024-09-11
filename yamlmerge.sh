@@ -19,15 +19,15 @@ Note: This script does not vet arguments securely. Do not setuid or host it.
 quiet=0
 outfile=/dev/stdout
 removecomments=(yq '... comments=""')
-sortyaml=cat
-espyaml=cat
+sortyaml=(cat)
+espyaml=(cat)
 espmerge=cat
 
 while [[ $# > 0 ]]
 do
   case $1 in
     -o|--out)	outfile="$2"; shift 2;;
-    -k|--keep)  removecomments=cat; shift 1;;
+    -k|--keep)  removecomments=(cat); shift 1;;
     -s|--sort)  sortyaml=(yq -P 'sort_keys(.)'); shift 1;;
     -e|--esp)   espyaml=(yq 'pick((["esphome", "esp32"] + keys) | unique)'); \
 		shift 1;;

@@ -6,30 +6,31 @@ endif
 # Y1 is run through cpptext and then esphome config > OUT1
 # Y2 is only run through esphome config > OUT2
 
-Y1   := ../make/myProj_0.yaml
+Y1DIR:= ../lily
+Y1   := $(Y1DIR)/build/espmake.yaml
 Y2   := lilygo-tdisplays3-esphome.yaml
 
 OUT1 := /tmp/cpptext.$(shell echo $$PPID)
 OUT2 := /tmp/esphome.$(shell echo $$PPID)
 
+
+# sort the map keys in the same order
+MERGE := ../../yamlmerge.sh -s -e -E
+
 test all:
-	@printf "Creating $(OUT1) from $(Y1) ..."
-	@make -C $(dir $(Y1)) clean > /dev/null
-	@make -C $(dir $(Y1)) all   > /dev/null 2> /dev/null
-	@cd $(dir $(Y1)); esphome config $(notdir $(Y1)) >$(OUT1) 2> /dev/null
-	@printf "done.\n"
-	@printf "Creating $(OUT2) from $(Y2) ..."
-	@esphome config $(Y2) >$(OUT2) 2> /dev/null
-	@printf "done.\n"
-	@printf "Comparing generated $(Y1) config with $(Y2) config ..."
-	@if diff $(OUT1) $(OUT2); then			        \
+	@cd $(Y1DIR) && make clean
+	@cd $(Y1DIR) && make build/secrets.yaml 
+	cd $(Y1DIR)  && make ESP_NOCOMPILE=1 build/espmake.yaml
+	cd $(Y1DIR)  && $(MERGE) < build/espmake.yaml > build/esphome.yaml
+	cd $(Y1DIR)/build && esphome config esphome.yaml >$(OUT1)
+	$(MERGE) < $(Y2) > $(Y2).merged 
+	esphome config $(Y2).merged >$(OUT2)
+	@if xargs -t -a /dev/null diff $(OUT1) $(OUT2); then    \
 	    printf " OK\n*** test passed ***\n"; 		\
-	    rm -rf $(OUT1) $(OUT2);			        \
+	    rm -rf $(OUT1) $(OUT2) $(Y2).merged;	        \
     	else 							\
 	    printf " FAIL\n*** Uh oh. Test failed.\n";		\
 	    printf "*** This should result in no output:\n";	\
 	    printf "\tdiff $(OUT1) $(OUT2)\n";		        \
-	    printf "*** And this be only blank lines and comments:\n";	\
-	    printf "\tdiff $(dir $(Y1))/myProj_0.yaml $(Y2)\n";	\
 	    exit 1; 						\
     	fi

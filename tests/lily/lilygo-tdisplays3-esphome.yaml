@@ -20,7 +20,7 @@ esp32:
 # Enable logging
 logger:
 
-#if CONFIG_HA
+#ifdef CONFIG_HA
 # Enable Home Assistant API
 api:
 
@@ -38,7 +38,7 @@ wifi:
     ssid: "S3 Fallback Hotspot"
     password: "zQ9tuPKIfFMu"
 
-#if CONFIG_HA
+#ifdef CONFIG_HA
 time:
   - platform: homeassistant
     id: ha_time
@@ -82,14 +82,14 @@ font:
     id: roboto
     size: 30
 
-#if CONFIG_DISPLAY
+#ifdef CONFIG_DISPLAY
 display:
   - platform: tdisplays3
     id: disp
     update_interval: 1s
     rotation: 270
     lambda: |-
-#if CONFIG_HA
+#ifdef CONFIG_HA
       it.printf(20, 70, id(roboto), Color(255, 0, 0), id(ha_time).now().strftime("%Y-%m-%d %H:%M:%S").c_str());
 #else  // !CONFIG_HA
       it.printf(20, 70, id(roboto), Color(255, 0, 0), "HA not configured");

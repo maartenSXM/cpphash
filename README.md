@@ -57,7 +57,7 @@ export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
 ```
 and the source your .bashrc before running dehash.sh.
 
-## makefile and Makefile
+## How to use this repo
 
 "makefile" and "Makefile" are functional makefile templates that will clone
 this repo into a project.

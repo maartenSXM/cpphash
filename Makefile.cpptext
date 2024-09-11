@@ -46,6 +46,10 @@ ifeq ($(CPT_SRCS),)
   $(error "set CPT_SRCS to the files you want to run dehash.sh on")
 endif
 
+ifeq ($(CPT_GEN),)
+  $(error "set CPT_GEN to the files you want to run cpp on")
+endif
+
 ifeq ($(shell which gcc),)
   $(error "gcc not found. Please install it")
 endif
@@ -111,7 +115,7 @@ define _uptodate
   printf "Makefile.cpptext: $(1) is up to date.\n";
 endef
 
-cppTgt: $(CPT_INFILES) $(CPT_TMP_SRCS) $(CPT_OUTFILES)
+cppTgt: $(CPT_INFILES) $(CPT_OUTFILES)
 	@$(foreach tgt,$(notdir $(CPT_OUTFILES)),$(call _uptodate,$(tgt)))
 
 $(CPT_INFILES):
@@ -120,7 +124,7 @@ $(CPT_INFILES):
 # Emit the rules that run cpp to generate all the CPT_OUTFILES
 
 define _cpp
-$(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1)
+$(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1) $(CPT_TMP_SRCS)
 	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
 	$(CPT_CPP_MORE)
 endef

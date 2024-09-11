@@ -21,6 +21,6 @@ The test directory compares the output of the make example to the
 original project that did not use make, dehash and the C-preprocessor.
 It achieves it's goal by running the generated yaml and the original
 yaml both through the esphome configuration validation tool, and thus
-requires that it the esphome command is installed.
+requires that the esphome command is installed.
 
 

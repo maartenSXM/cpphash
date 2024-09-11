@@ -1,0 +1,3 @@
+MAKECMDGOALS ?= all
+$(MAKECMDGOALS):
+	make -C example $(MAKECMDGOALS)
