@@ -3,4 +3,6 @@
 # You can modify this file to suit your needs.
 /.esphome/
 /secrets.yaml
-cpptext
+cpptext/
+.espmake_project
+build/

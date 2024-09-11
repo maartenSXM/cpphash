@@ -71,6 +71,10 @@ ESPMAKE_PROJECT  = $(basename $(notdir $(ESPMAKE_PRJ_PATH)))
 # the depth of CPT_BUILD_DIR changes. Refer to the CPT_HOME comments below
 # for more details.
 
+ifeq (,$(wildcard build/$(ESPMAKE_PROJECT)))
+  $(shell mkdir -p build/$(ESPMAKE_PROJECT))
+endif
+
 CPT_BUILD_DIR = $(shell realpath --relative-to=$(CURDIR) \
 		            build/$(ESPMAKE_PROJECT))
 ESPMAKE_BUILD_LOG = $(CPT_BUILD_DIR)/makeall.log
