@@ -1,21 +1,93 @@
-#!/bin/bash 
+#!/bin/bash
 
 me=$(basename "$0")
 
 # merge esphome yaml array elements named by an "id:" item
 
+# Array blocks to merge must be fully qualified and only
+# have items at the lowest level.  The id: must only
+# refer to the level that the items will merge into.
+
+#
+# This block comment contains a *valid* input:
+#
+
+: <<'END'
+---
+touchscreen:
+  - platform: cst226
+    id: gosBsp_touchscreen
+    interrupt_pin: 8
+---
+display:
+  platform: qspi_amoled
+  id: gosBsp_display
+  model: RM690B0
+---
+touchscreen:
+  - platform: cst226
+    id: gosBsp_touchscreen
+    reset_pin: 17
+END
+
+#
+# This block comment contains an *invalid* input:
+#
+
+: <<'END'
+---
+touchscreen:
+  - platform: cst226
+    id: gosBsp_touchscreen
+    - platform: foo
+      id: gosBsp_foo
+      item2: glorp
+---
+foo:
+  id: gosBsp_display
+---
+touchscreen:
+  - platform: cst226
+    id: gosBsp_touchscreen
+    - platform: foo
+      id: gosBsp_foo
+      item2: blort
+END
+
 verbose=0
 chatty=1
 
-declare -A id_from
-declare -A id_to
+declare nlines=0	# number of input lines read 
+declare nwork=0		# number of work items (line blocks) to merge
 
-is_newdoc='---'
-is_array='^[[:blank:]]+- .+$'
-is_id='^[[:blank:]]+id:[[:blank:]]+(.+)$'
-nwork=0
+# skip array is indexed by input line number 0 to <nlines>
 
-# slurp in the yaml on stdin
+declare -a skip		# lines to not output
+
+# These arrays are indexed by work item number 0 to <nwork>
+
+declare -a work_from	# first line of merge block
+declare -a work_to	# last line of merge block
+declare -a work_dest	# line number of where to merge to
+
+# These associative arrays are indexed by esphome id: (text)
+
+declare -A id_from	# begin of recorded merge block
+declare -A id_to	# destination of recorded merge block
+declare -A id_spaces	# indentation level of recorded merge block
+
+# These strings used to identify special esphome yaml lines
+
+declare is_newdoc='---'
+declare is_array='^[[:blank:]]+- .+$'
+declare is_id='^[[:blank:]]+id:[[:blank:]]+(.+)$'
+
+# This function reads in the esphome yaml on stdin
+
+# It is advised to preprocess the esphome yaml with
+# yq '... comments=""' esphome.yaml | awk '/^[[:alnum:]_]/{print "---"}
+# before piping it into espmerge.yaml.  See yamlmerge.sh which invokes
+# espmerge.sh and also Makefile.esphome which invokes yamlmerge.sh.
 
 read_lines () {
   local n=0
@@ -27,7 +99,7 @@ read_lines () {
   let "nlines=n"
 }
 
-# burp out the merged yaml on stdout
+# Output the merged yaml on stdout. Works on globals declared above
 
 write_lines () {
   local w=0
@@ -36,26 +108,28 @@ write_lines () {
   local dest=0
   local to=0
 
-  # for each block of merge work to do
+  # While outputting yaml, process the merging work items recorded
 
   for (( w=0 ;   w < $nwork  ; w++ )); do
 
-    # output the original lines up to the work, unless skipping them
+    # Output the original lines up to the work, unless skipping them
     for (( dest=work_dest[w]; n <= dest; n++ )); do
       (( skip[n] == 0 )) && echo "${lines[$n]}"
     done
 
-    # skip first line of replicated section to merge
+    # Skip first line of the merge block as it is already in the dest block
+
     i=${work_from[$w]}+1
     for (( to=work_to[w]; i <= to; i++ )); do
-      # skip id: since already specified
+      # skip the id: since already specified
       if [[ ! "${lines[$i]}" =~ $is_id ]]; then
         echo "${lines[$i]}"
       fi
     done
   done
 
-  # now out the rest of the non-merged lines, unless skipping them
+  # Output the rest of the lines of input after all work items are done
+
   while (( n < $nlines )); do
     (( skip[n] == 0 )) && echo "${lines[$n]}"
     let "n++"
@@ -64,6 +138,7 @@ write_lines () {
 
 # Record the block to merge as long as it is at the same indentation level.
 # Else it is a reference to an id that is in another array element.
+
 # The corollary is that this script will fail if there is a back
 # reference to an existing array element by id: from a different array
 # element at the same indentation level.
@@ -91,7 +166,7 @@ id_record () {
       let "nwork++"
       for (( n=from; n <= to; n++ )); do
         # record that we have to skip outputting these lines since they
-	# are outputting earlier in the file due to merge
+	# are outputting earlier in the file due to being in a merge block
         skip[$n]=1
       done
       # also skip the leading up section headers in the merged section since
@@ -108,6 +183,8 @@ id_record () {
     fi
   fi
 }
+
+# This function is called recursively for each common block of yaml
 
 _find_id_block () {
   local blockStart="$1"
@@ -138,20 +215,23 @@ _find_id_block () {
 
   while (( n < nlines )); do
 
-     # get the leading spaces of the current line
+     # Get the leading spaces of the current line
+
      spaces="${lines[$n]%%[![:space:]]*}"
 
-     # add 2 to space if it is an array element to consider "- "
+     # Add 2 to spaces if it is an array element in order to consider "- "
+
      if [[ "${lines[$n]}" =~ $is_array ]]; then
        spaces="$spaces  "
      fi
 
-     # if depth if less than where we started, we are at the end of the block
+     # If depth is less than where we started, we are at the end of the block
+
      if [[ "$spaces" < "$startSpaces" ]]; then
        break
      fi
 
-     # new array is starting, start a new block and then end this one
+     # A New array item is starting: start a new block and then end this one
      if [[ "${lines[$n]}" =~ $is_array ]]; then
        if [[ "$blockIsArray" == "1" ]]; then
          ((verbose)) && echo in array at $n "x${spaces}x"
@@ -162,13 +242,13 @@ _find_id_block () {
        fi
      fi
 
-     # indentation went to the right, start a new block
+     # Indentation went to the right: start a new block
      if [[ "$spaces" > "$startSpaces" ]]; then
        ((verbose)) && echo in block at $n "x${spaces}x"
        _find_id_block "$n"
        n=$ret_n
        ((verbose)) && echo out block at $n
-       continue
+       continue	    # since there could be more lines in this common block
      fi
 
      # correct depth: this line is in the block
@@ -188,6 +268,8 @@ _find_id_block () {
 
   let "n--"
 
+  # If block has an id: field, let's remember it
+  
   if [[ "$blockHasId" == "1" ]]; then
     id_record $blockStart $n "$idLine" "$id" "$startSpaces"
   fi
@@ -209,30 +291,11 @@ find_id_blocks () {
   _find_id_block 0
 }
 
-record_block_moves () {
-  true
-}
-
-status=0
-
 read_lines
 
 find_id_blocks
 
-record_block_moves
-
 write_lines
 
-exit $status
+exit 0
 
-# cp esphome.yaml smeg.yaml
-# yq '... comments=""' smeg.yaml >smeg2.yaml
-# awk '/^[[:alnum:]_]/{print "---"}; {print $0}' <smeg2.yaml >smeg3.yaml
-# yq -eval-all -P smeg3.yaml >smeg4.yaml
-
-# echo "smeg: ${keys[switch:]}"
-for i in "${!keys[@]}"
-do
-  # echo "${i}=${keys[$i]}"
-  echo "${i}"
-done
