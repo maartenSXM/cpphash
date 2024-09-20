@@ -68,7 +68,7 @@ else
 endif
 	
 define CPT_CLEAN_MORE
-	rm -f $(ESP_MAIN) $(sort -u $(ESP_MD5FILES))
+	rm -f $(ESP_MAIN) $(ESP_MD5FILES)
 	@if [ -f $(CPT_BUILD_DIR)/secrets.yaml ]; then	\
 	    echo rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
 	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
