@@ -112,9 +112,4 @@ To install GNU sed, please do this:
 ```
 brew install gsed
 ```
-and then add this line to your .bashrc:
-```
-export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
-```
-and then 'source .bashrc' or logout and log back in.
 

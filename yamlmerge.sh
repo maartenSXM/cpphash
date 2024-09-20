@@ -1,7 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o nounset		# require variables to be set before referenced
 
+if ! [ -x "$(command -v yq)" ]; then
+  echo '$0: yq is not installed. Install it' >&2
+fi
+
+declare -i status
 declare -r me=${0##*/}  # basename of this script
 declare -r cpptextDir=$(dirname "$0")
 
@@ -79,7 +84,8 @@ $decomment < "$yaml" | $espmerge | $map2doc | \
 
 status=$?
 
-((quiet)) && exit $status
+((status != 0)) && exit $status
+((quiet)) && exit 0
 
 # Optionally output how many yaml map keys were processed.
 

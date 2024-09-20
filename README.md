@@ -46,17 +46,20 @@ Some possible dehash command variants are:
  ./dehash.sh -b example.txt
  ./dehash.sh -c -b example.txt
 ```
+Note: cpptext uses GNU sed, md5sum and yq.
 
-Note: on MacOS, you need GNU sed to run dehash.sh and cpptext.sh. To install GNU sed, please do this:
-```
-brew install gsed
-```
-and then add this line to your .bashrc:
-```
-export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
-```
-and the source your .bashrc before running dehash.sh.
+If missing, yq can be installed on Linux with:
 
+  sudo apt install yq -y
+    or
+  snap install yq --channel=v3/stable
+    or
+  apk add yq
+
+On MacOS, usually all three are missing and can be installed as follows:
+```
+  brew install gsed md5sha1sum yq
+```
 ## How to use this repo
 
 "makefile" and "Makefile" are functional makefile templates that will clone

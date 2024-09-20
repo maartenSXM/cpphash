@@ -54,8 +54,14 @@ ifeq ($(shell which gcc),)
   $(error "gcc not found. Please install it")
 endif
 
-ifeq (,$(findstring GNU,$(shell sed --version)))
-  $(error "GNU sed not found. Please install it")
+ifeq (,$(findstring GNU,$(shell sed --version 2>/dev/null)))
+  ifeq (,$(shell which gsed))
+    $(error "GNU sed not found. Please install it")
+  else
+    SED=gsed
+  endif
+else
+    SED=sed
 endif
 
 ifeq ($(CPT_BUILD_DIR),.)
@@ -101,9 +107,8 @@ $(shell mkdir -p $(CPT_MKDIRS))
 
 # skip include of esphome.mk by defining CPT_NO_ESPHOME to non-empty
 ifeq (,$(CPT_NO_ESPHOME))
-  # include esphome.mk if an esphome virtual environment is active
-  ifneq (,$(findstring esphome,$(VIRTUAL_ENV)))
-    # esphomeTgt is defined in esphome.mk
+  # include esphome.mk if ESP_INIT is defined
+  ifneq (,$(ESP_INIT))
     CPT_MAIN_TGT = esphomeTgt
     include $(CPT_HOME)/esphome.mk
   endif
@@ -152,7 +157,8 @@ realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
 	-@if [ "`git -C $(CPT_HOME) status --porcelain`" != "" ]; then	\
 		printf "$(CPT_HOME) not porcelain. Leaving it.\n";	\
 	else								\
-		xargs -a /dev/null -t rm -rf $(CPT_HOME);		\
+		echo rm -rf $(CPT_HOME);				\
+		rm -rf $(CPT_HOME);					\
 	fi
 	rm -rf $(CPT_TMP_DIR) $(CPT_REALCLEAN_FILES)
 	$(CPT_REALCLEAN_MORE)
@@ -161,7 +167,7 @@ define _print_defaults
 print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
 	@printf "Default values for $(1)\n"
 	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) | \
-		grep '^//#default' | sed 's/^../  /'
+		grep '^//#default' | $(SED) 's/^../  /'
 endef
 
 $(foreach gen,$(patsubst ./%,%,$(CPT_GEN)), \

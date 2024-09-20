@@ -40,7 +40,7 @@ else
 
 # Record each distint PRJ in .espmake_all
 define _saveprj
-  $(shell grep -qxF $1 .espmake_all || echo $1 >> .espmake_all)
+  $(shell grep -sqxF $1 .espmake_all || echo $1 >> .espmake_all)
 endef
 
 # choose CPT_HOME from ./cpptext and .

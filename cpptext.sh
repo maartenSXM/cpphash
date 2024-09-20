@@ -1,4 +1,15 @@
-#!/bin/bash -x
+#!/usr/bin/env bash
+
+if [[ "$(sed --version 2>/dev/null)" =~ "GNU" ]]; then
+  SED=sed
+else
+  if [[ "$(which gsed)" =~ "gsed" ]]; then
+    SED=gsed
+  else
+    echo "$(basename $0): GNU sed not found. Please install it"
+    exit -1
+  fi
+fi
 
 name=`basename $0`
 scriptpath="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
@@ -150,8 +161,8 @@ done
 
 # after cpp, the sed restores the shebang that dehash.sh may have found
 
-((verbose)) && echo "$0: $gcc -I \"$tempdir\" -I . $cppincs $cppdefs \"$cppfile\" | sed '1 {s,^__SHEBANG__,#"'!'",}' | $postcpp > \"$outfile\""
+((verbose)) && echo "$0: $gcc -I \"$tempdir\" -I . $cppincs $cppdefs \"$cppfile\" | $SED '1 {s,^__SHEBANG__,#"'!'",}' | $postcpp > \"$outfile\""
 
-((doit)) && $gcc -I "$tempdir" -I . $cppincs $cppdefs "$cppfile" | sed '1 {s,^__SHEBANG__,#!,}' | $postcpp > "$outfile"
+((doit)) && $gcc -I "$tempdir" -I . $cppincs $cppdefs "$cppfile" | $SED '1 {s,^__SHEBANG__,#!,}' | $postcpp > "$outfile"
 
 exit

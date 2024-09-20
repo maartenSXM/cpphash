@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/usr/bin/env bash
 
 # espmerge.sh: read esphome yaml and output merged esphome yaml.
 
@@ -25,7 +25,14 @@
 
 # Require all variables to be declared - to catch variable typos early.
 
+set -e
 set -o nounset
+set -o pipefail
+
+if (($BASH_VERSINFO < 4)); then
+  echo "$0 *** bash must be at version 4 or greater. Install it. ***" >&2
+  exit -1
+fi
 
 declare -i chatty=1	    # some operational feedback to stdout
 declare -i dbgParse=0	    # input parser debug output to stderr

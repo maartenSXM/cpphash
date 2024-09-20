@@ -4,9 +4,9 @@
 # The including Makefile should include cpptext.mk, which in turn
 # includes this file automatically, when make runs in an esphome venv.
 
-# The including Makefile can define ESP_INIT to an output of
+# Note: the including Makefile must define ESP_INIT to an output of
 # cpptext.mk (i.e. it is one of the generated files listed
-# in CPT_GEN). The default for ESP_INIT is "esphome.yaml".
+# in CPT_GEN).
 
 # The including Makefile can also define ESP_YAML to the name of the yaml
 # file that this Makefile should generate using yamlmerge.sh, for processing
@@ -29,7 +29,10 @@ ifeq ($(shell which md5sum),)
   $(error "md5sum not found. Please install it")
 endif
 
-ESP_INIT  ?= esphome.yaml
+ifeq (,$(ESP_INIT))
+  $(error esphome.mk: ESP_INIT not defined)
+endif
+
 ESP_YAML  ?= espmake.yaml
 ESP_GEN   := $(CPT_BUILD_DIR)/$(ESP_INIT)
 ESP_MAIN  := $(CPT_BUILD_DIR)/$(ESP_YAML)
@@ -64,18 +67,11 @@ else
 	cd "$(@D)" && esphome compile "$(@F)"
 endif
 	
-# Since ESP_MD5FILES can be a long list, avoid blowing ARG_MAX by
-# stashing the filenames in a temporary file and passing it to xargs.
-
 define CPT_CLEAN_MORE
-	$(eval ESP_CLEAN := $(shell mktemp))
-	$(foreach f,				    \
-	    $(ESP_MAIN) $(sort $(ESP_MD5FILES)),    \
-	    $(file >>$(ESP_CLEAN),$(f)))
-	@xargs -t -a $(ESP_CLEAN) rm -f
-	@rm -f $(ESP_CLEAN)
-	@if [ -f $(CPT_BUILD_DIR)/secrets.yaml ]; then			\
-	    xargs -a /dev/null -t rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
+	rm -f $(ESP_MAIN) $(sort -u $(ESP_MD5FILES))
+	@if [ -f $(CPT_BUILD_DIR)/secrets.yaml ]; then	\
+	    echo rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
+	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
 	fi
 endef
 

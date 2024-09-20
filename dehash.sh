@@ -1,4 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+if [[ "$(sed --version 2>/dev/null)" =~ "GNU" ]]; then
+  SED=sed
+else
+  if [[ "$(which gsed)" =~ "gsed" ]]; then
+    SED=gsed
+  else
+    echo "$(basename $0): GNU sed not found. Please install it"
+    exit -1
+  fi
+fi
 
 HELP="`basename $0` removes '#'-style comments
 
@@ -125,6 +136,6 @@ echo '
 
   #endif // !BLANK
 
-' | $GCC $GCCFLAGS | sed -E -r -f - "$file" > "$outfile"
+' | $GCC $GCCFLAGS | $SED -E -r -f - "$file" > "$outfile"
 
 exit $?
