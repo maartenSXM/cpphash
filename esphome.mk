@@ -35,7 +35,7 @@ endif
 
 ESP_YAML  ?= espmake.yaml
 ESP_GEN   := $(CPT_BUILD_DIR)/$(ESP_INIT)
-ESP_MAIN  := $(CPT_BUILD_DIR)/$(ESP_YAML)
+ESP_MAKE  := $(CPT_BUILD_DIR)/$(ESP_YAML)
 ESP_MERGE := $(CPT_HOME)/yamlmerge.sh -e -E
 
 # md5 adds .md5 suffix to file names and records them for "make clean"
@@ -52,12 +52,24 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 
 .PHONY: esphomeTgt
 
-esphomeTgt: cppTgt $(ESP_MAIN)
+esphomeTgt: cppTgt $(ESP_MAKE)
 	@printf "esphome.mk: project $(CPT_BUILD_DIR) is up to date.\n"
+
+# Force an esphome compilation when firmware.bin creation failed.
+
+ifeq ($(ESP_NOCOMPILE),)
+  ESP_PIO_DIR:=$(wildcard $(CPT_BUILD_DIR)/.esphome/build/*)
+  ESP_FIRMWARE:=$(wildcard $(ESP_PIO_DIR)/.pioenvs/*/firmware.bin)
+  ESP_MAIN_CPP:=$(ESP_PIO_DIR)/src/main.cpp
+  ifeq (yes,$(shell test $(ESP_MAIN_CPP) -nt $(ESP_FIRMWARE) && echo yes))
+    FORCE: ;
+    ESP_FORCE=FORCE
+  endif
+endif
 
 # File contents (not timestamps) are used as dependencies in this rule.
 
-$(ESP_MAIN): $(call md5,$(ESP_GEN) $(ESP_DEPS))
+$(ESP_MAKE): $(call md5,$(ESP_GEN) $(ESP_DEPS)) $(ESP_FORCE)
 	@printf "esphome.mk: $(<F:.md5=) changed.\n"
 	$(ESP_MERGE) -o "$@" "$(<:.md5=)"
 	$(ESP_BUILD_MORE)
@@ -68,7 +80,7 @@ else
 endif
 	
 define CPT_CLEAN_MORE
-	rm -f $(ESP_MAIN) $(ESP_MD5FILES)
+	rm -f $(ESP_MAKE) $(ESP_MD5FILES)
 	@if [ -f $(CPT_BUILD_DIR)/secrets.yaml ]; then	\
 	    echo rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
 	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
