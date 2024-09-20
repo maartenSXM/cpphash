@@ -1,16 +1,21 @@
 #!/bin/bash
-cpptextDir=$(dirname "$0")
 
-HELP="`basename $0` merges duplicate map keys in non-compliant yaml
+set -o nounset		# require variables to be set before referenced
 
-Usage: `basename $0` [-o outfile] <yamlfile>
-  -o|--outfile\tfile to write to, else stdout
-  -k|--keep\tkeep yaml comments
-  -s|--sort\tsort the map keys after merging
-  -e|--esphome\toutput esphome: and esp32: map keys first
-  -E|--espmerge\tenable merging of esphome array elements by id: reference
-  -q|--quiet\tdo not output the number of merged components
-<yamlfile>\tyaml file to operate, else stdin
+declare -r me=${0##*/}  # basename of this script
+declare -r cpptextDir=$(dirname "$0")
+
+HELP="$me: merges duplicate map keys in non-compliant yaml
+
+Usage: $me: [-okseEqh] [-o outfile] <file.yaml>
+  -o|--outfile\tFile to write to, else stdout.
+  -k|--keep\tKeep yaml comments.
+  -s|--sort\tSort the map keys.
+  -e|--esphoist\tHoist the esphome: and esp32: map keys to output first.
+  -E|--espmerge\tEnable esphome item merging using \"id\": references.
+  -q|--quiet\tdo not output the number of merged components.
+  -h|--help\toutput this help.
+<file.yaml>\tyaml file to operate, else stdin.
 
 This script is from git repo github.com/maartenSXM/cpptext.
 Note: This script does not vet arguments securely. Do not setuid or host it.
@@ -18,20 +23,30 @@ Note: This script does not vet arguments securely. Do not setuid or host it.
 
 quiet=0
 outfile=/dev/stdout
-removecomments=(yq '... comments=""')
-sortyaml=(cat)
-espyaml=(cat)
+
+DECOMMENT() { yq '... comments=""'; }
+ESPMERGE()  { "$cpptextDir/espmerge.sh"; }
+MAP2DOC()   { awk '/^[[:alnum:]_]/{print "---"}; {print $0}'; }
+YQMERGE()   { yq eval-all '. as $item ireduce ({}; . *+ $item)'; }
+YQSORT()    { yq -P 'sort_keys(.)'; }
+ESPHOIST()  { yq 'pick((["esphome", "esp32"] + keys) | unique)'; }
+
+decomment=DECOMMENT
 espmerge=cat
+map2doc=MAP2DOC
+yqmerge=YQMERGE
+yqsort=cat
+esphoist=cat
 
 while [[ $# > 0 ]]
 do
   case $1 in
     -o|--out)	outfile="$2"; shift 2;;
-    -k|--keep)  removecomments=(cat); shift 1;;
-    -s|--sort)  sortyaml=(yq -P 'sort_keys(.)'); shift 1;;
-    -e|--esp)   espyaml=(yq 'pick((["esphome", "esp32"] + keys) | unique)'); \
-		shift 1;;
-    -E|--espmerge) espmerge="${cpptextDir}/espmerge.sh"; shift 1;;
+    -h|--help)	echo $HELP; exit 0;;
+    -k|--keep)  decomment=cat; shift 1;;
+    -s|--sort)  yqsort=YQSORT; shift 1;;
+    -e|--esphoist) esphoist=ESPHOIST; shift 1;;
+    -E|--espmerge) espmerge=ESPMERGE; shift 1;;
     -q|--quiet)	quiet=1; shift;;
     *) break
   esac
@@ -52,28 +67,28 @@ fi
 # distinct yaml documents by outputting '---'.
 
 # yamlmerge.sh processes a single yaml files using these steps:
-#  First, yaml comments are optionally removed using yq.
-#  Then map keys are each put in their own yaml document, using awk.
-#  Then map keys are merged using yq.
-#  Then map keys are optionally sorted using yq.
+#   First, yaml comments are optionally removed using yq.
+#   Then espmerge.sh is run if requested.
+#   Then map keys are each put in their own yaml document, using awk.
+#   Then map keys are merged using yq.
+#   Then map keys are optionally sorted using yq.
+#   Then esphome map keys are optionally hoisted using yq.
 
-"${removecomments[@]}" "$yaml"			      |	\
-    awk '/^[[:alnum:]_]/{print "---"}; {print $0}'    |	\
-    $espmerge					      | \
-    yq eval-all '. as $item ireduce ({}; . *+ $item)' |	\
-    "${sortyaml[@]}" | "${espyaml[@]}" > "$outfile"
+$decomment < "$yaml" | $espmerge | $map2doc | \
+    $yqmerge | $yqsort | $esphoist > "$outfile"
 
 status=$?
 
-# Finally, optionally output how many yaml map keys were merged.
-
 ((quiet)) && exit $status
+
+# Optionally output how many yaml map keys were processed.
 
 if [ "$yaml" != "/dev/stdin" ]; then
   if [ "$outfile" != "/dev/stdout" ]; then
-    ncomps=`grep '^\S' $yaml | wc -l`
-    printf '%b' "$0: \033[1mMerged $ncomps"	1>&2
-    printf '%b\n' " components.\033[0m"		1>&2
+    ncompsin=$(grep -E '^[[:alnum:]]+:$' $yaml | wc -l)
+    ncompsout=$(grep -E '^[[:alnum:]]+:$' $outfile | wc -l)
+    printf '%b' "$0: \033[1mMerged $ncompsin" 1>&2
+    printf '%b\n' " components into $ncompsout.\033[0m"	1>&2
   fi
 fi
 
