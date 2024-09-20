@@ -1,3 +1,6 @@
+# Directory of this Makefile
+_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
 # This Makefile is from https://github.com/maartenSXM/cpptext
 
 # It is esphome project independent since all esphome project
@@ -9,11 +12,14 @@
 # Refer to https://github.com/maartenSXM/cpptext/blob/main/README.md
 # for more details.
 
-ifeq (,$(MAKECMDGOALS))
-MAKECMDGOALS := all
+# default ESPMAKE_HOME to this directory
+ifeq (,$(ESPMAKE_HOME))
+  ESPMAKE_HOME:=$(_DIR)
 endif
-MAKE            := $(MAKE) --no-print-directory
-MAKEFILE        := $(lastword $(MAKEFILE_LIST))
+
+MAKECMDGOALS ?= all
+MAKE         := $(MAKE) ESPMAKE_HOME=$(ESPMAKE_HOME) --no-print-directory
+MAKEFILE     := $(lastword $(MAKEFILE_LIST))
 
 # Get cpptext when this Makefile has been copied out of cpptext
 # *and* we are run from an example inside cpptext
@@ -32,7 +38,10 @@ else
 
 # The rest of this Makefile is inside the 'ifeq' cpptext check from above.
 
-PRJ ?= ./esphome.yaml
+# Record each distint PRJ in .espmake_all
+define _saveprj
+  $(shell grep -qxF $1 .espmake_all || echo $1 >> .espmake_all)
+endef
 
 # choose CPT_HOME from ./cpptext and .
 CPT_HOME := $(patsubst %/,%, \
@@ -43,15 +52,14 @@ ifneq (,$(PRJ))
   ifeq (,$(wildcard $(PRJ)))	    # check specified espmake project exists
     $(error $(MAKEFILE): $(PRJ) not found)
   endif
-  $(shell echo $(PRJ) > .espmake_project)
+  $(shell echo $(PRJ) > .espmake_prj)
+  $(call _saveprj,$(PRJ))
 else
-  ifneq (,$(wildcard .espmake_project))
-    PRJ := $(shell cat .espmake_project)
+  ifneq (,$(wildcard .espmake_prj))
+    PRJ := $(shell cat .espmake_prj)
   else
-    ifeq (,$(wildcard $(ESP_INIT)))
-      $(error $(MAKEFILE): ESP_INIT not found)
-    endif
-    PRJ = $(ESP_INIT)
+    $(info  $(MAKEFILE): Specifiy an esphome yaml file with PRJ=. Like this:)
+    $(error $(MAKEFILE):   make PRJ=./esphome.yaml)
   endif
 endif
 
@@ -67,16 +75,16 @@ ESPMAKE_PRJ_PATH = $(PRJ)
 ESPMAKE_PRJ_DIR  = $(patsubst %/,%,$(dir $(PRJ)))
 ESPMAKE_PROJECT  = $(basename $(notdir $(ESPMAKE_PRJ_PATH)))
 
-# CPT_BUILD_DIR is where espmake projects are built.  It can be changed here.
-# the depth of CPT_BUILD_DIR changes. Refer to the CPT_HOME comments below
-# for more details.
-
 ifeq (,$(wildcard build/$(ESPMAKE_PROJECT)))
   $(shell mkdir -p build/$(ESPMAKE_PROJECT))
 endif
 
-CPT_BUILD_DIR = $(shell realpath --relative-to=$(CURDIR) \
-		            build/$(ESPMAKE_PROJECT))
+# CPT_BUILD_DIR is where ESPMAKE projects are built. If changed, review
+# the definition of ESPMAKE_TOP below.  It declares the relative path to
+# ESPMAKE_HOME from CPT_BUILD_DIR. This is done manually because realpath
+# does not support the --relative-to option on many non-Linux OSs.
+
+CPT_BUILD_DIR = ./build/$(ESPMAKE_PROJECT))
 ESPMAKE_BUILD_LOG = $(CPT_BUILD_DIR)/makeall.log
 
 # restart 'make all' with logging to $(CPT_BUILD_DIR)/build.log and console
@@ -140,20 +148,17 @@ CPT_EXTRA_INCS += $(foreach d,$(ESPMAKE_DIRS),-I $(d))
 
 # These #defines are for project adapation. 
 
-CPT_EXTRA_DEFS += -D ESPMAKE_HOME=../..				\
+# Also ESPMAKE_TOP is how to get from the build directory back to
+# ESPMAKE_HOME. It is ESPMAKE_HOME relative from CPT_BUILD_DIR.
+
+CPT_EXTRA_DEFS += -D ESPMAKE_HOME=$(ESPMAKE_HOME)		\
+		  -D ESPMAKE_TOP=../..				\
 		  -D ESPMAKE_BUILD_PATH=$(CPT_BUILD_DIR)	\
 		  -D ESPMAKE_PRJ_DIR=$(ESPMAKE_PRJ_DIR)		\
 		  -D ESPMAKE_PROJECT_NAME=$(ESPMAKE_PROJECT)	\
 		  -D ESPMAKE_PROJECT_$(ESPMAKE_PROJECT)		\
 		  -D ESPMAKE_USER_NAME=$(USER)			\
 		  -D ESPMAKE_USER_$(USER)
-
-# The reason ESPMAKE_HOME is set above to two levels up i.e. ../.. is because
-# the generated espmake.yaml ends up in $(CPT_BUILD_DIR) which is
-# build/$(ESPMAKE_PROJECT) which is two levels down from this directory.
-# ESPMAKE_HOME is used in yaml or C/C++ files to refer to files and directories
-# under this directory and is define as a relative so that build trees
-# are reproducable regardless of where they are built.
 
 # This includes the cpptext Makefile fragment that will dehash yamls files.
 # In turn, it will include cpptext/esphome.mk which handles the esphome
