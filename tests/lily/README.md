@@ -5,7 +5,7 @@ and build an esphome project
 
 ./makefile and ./Makefile linked directly ../..
 ./Makefile was editted to uncomment the line that
-includes cpptext/esphome.mk.
+includes cpphash/esphome.mk.
 
 ## files
 
@@ -13,7 +13,7 @@ The files you will find in this directory are:
 
 ### makefile & Makefile
 
-Copied from https://github.com/maartenSXM/cpptext
+Copied from https://github.com/maartenSXM/cpphash
 
 ### main.yaml
 An example project's main file. If you prefer another file name, you

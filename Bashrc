@@ -86,15 +86,15 @@ alias esp_search_here="find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*'
 
 # Aliases to search for arg1 and replace it with arg2 in all files.
 # Backup files are stored in <file>.bak.  There are variants for arg1
-# not containing octothorpe, comma and slash. The default is no slash.
+# not containing hash, comma and slash. The default is no slash.
 esp_replace_nohash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git*' ! -path '*/build*' ! -path '*/cpptext*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s#$1#$2#g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build*' ! -path '*/cppHash*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s#$1#$2#g"
 }
 esp_replace_nocomma() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git*' ! -path '*/build*' ! -path '*/cpptext*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s,$1,$2,g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build*' ! -path '*/cppHash*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s,$1,$2,g"
 }
 esp_replace_noslash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git*' ! -path '*/build*' ! -path '*/cpptext*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s/$1/$2/g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build*' ! -path '*/cppHash*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s/$1/$2/g"
 }
 alias esp_replace='esp_replace_noslash'
 

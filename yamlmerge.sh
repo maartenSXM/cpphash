@@ -8,7 +8,7 @@ fi
 
 declare -i status
 declare -r me=${0##*/}  # basename of this script
-declare -r cpptextDir=$(dirname "$0")
+declare -r cpphashDir=$(dirname "$0")
 
 HELP="$me: merges duplicate map keys in non-compliant yaml
 
@@ -22,7 +22,7 @@ Usage: $me: [-okseEqh] [-o outfile] <file.yaml>
   -h|--help\toutput this help.
 <file.yaml>\tyaml file to operate, else stdin.
 
-This script is from git repo github.com/maartenSXM/cpptext.
+This script is from git repo github.com/maartenSXM/cpphash.
 Note: This script does not vet arguments securely. Do not setuid or host it.
 "
 
@@ -30,7 +30,7 @@ quiet=0
 outfile=/dev/stdout
 
 DECOMMENT() { yq '... comments=""'; }
-ESPMERGE()  { "$cpptextDir/espmerge.sh"; }
+ESPMERGE()  { "$cpphashDir/espmerge.sh"; }
 MAP2DOC()   { awk '/^[[:alnum:]_]/{print "---"}; {print $0}'; }
 YQMERGE()   { yq eval-all '. as $item ireduce ({}; . *+ $item)'; }
 YQSORT()    { yq -P 'sort_keys(.)'; }

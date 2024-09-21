@@ -1,7 +1,7 @@
 # Directory of this Makefile
 _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
-# This Makefile is from https://github.com/maartenSXM/cpptext
+# This Makefile is from https://github.com/maartenSXM/cpphash
 
 # It is esphome project independent since all esphome project
 # configuration can be conditionally included from yaml that the
@@ -9,7 +9,7 @@ _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 # a some C preprocessor defines that your espmake.yaml can use to do
 # such # adaptation. See CPT_EXTRA_DEFS below.
 
-# Refer to https://github.com/maartenSXM/cpptext/blob/main/README.md
+# Refer to https://github.com/maartenSXM/cpphash/blob/main/README.md
 # for more details.
 
 # default ESPMAKE_HOME to this directory
@@ -21,31 +21,31 @@ MAKECMDGOALS ?= all
 MAKE         := $(MAKE) ESPMAKE_HOME=$(ESPMAKE_HOME) --no-print-directory
 MAKEFILE     := $(lastword $(MAKEFILE_LIST))
 
-# Get cpptext when this Makefile has been copied out of cpptext
-# *and* we are run from an example inside cpptext
+# Get cpphash when this Makefile has been copied out of cpphash
+# *and* we are run from an example inside cpphash
 
-ifeq (,$(wildcard cpptext/cpptext.mk)$(wildcard cpptext.mk))
+ifeq (,$(wildcard cpphash/cpphash.mk)$(wildcard cpphash.mk))
   ifneq (,$(BAIL))
     $(error $(MAKEFILE): make loop detected. Bailing out.)
   endif
 
 $(MAKECMDGOALS): 
-	git clone https://github.com/maartenSXM/cpptext.git
-	cd cpptext && git checkout main
+	git clone https://github.com/maartenSXM/cpphash.git
+	cd cpphash && git checkout main
 	@printf "$(MAKEFILE): Restarting \"make $(MAKECMDGOALS)\"\n"
 	@$(MAKE) BAIL=1 $(MAKECMDGOALS)
 else
 
-# The rest of this Makefile is inside the 'ifeq' cpptext check from above.
+# The rest of this Makefile is inside the 'ifeq' cpphash check from above.
 
 # Record each distint PRJ in .espmake_all
 define _saveprj
   $(shell grep -sqxF $1 .espmake_all || echo $1 >> .espmake_all)
 endef
 
-# choose CPT_HOME from ./cpptext and .
+# choose CPT_HOME from ./cpphash and .
 CPT_HOME := $(patsubst %/,%, \
-	    $(dir $(wildcard cpptext/cpptext.mk)$(wildcard ./cpptext.mk)))
+	    $(dir $(wildcard cpphash/cpphash.mk)$(wildcard ./cpphash.mk)))
 
 # Check if PRJ= was specified on the command line to select a project.
 ifneq (,$(PRJ))
@@ -68,7 +68,7 @@ ifeq (,$(wildcard $(PRJ))) # check specified initial file exists
     $(error $(MAKEFILE): Perhaps run this in the example directory?)
 endif
 
-# set the variable that cpptext/cpptext.mk uses
+# set the variable that cpphash/cpphash.mk uses
 ESP_INIT = $(PRJ)
 
 ESPMAKE_PRJ_PATH = $(PRJ)
@@ -96,8 +96,8 @@ all:
 	@printf "Makefile: \"make all\" log is $(ESPMAKE_BUILD_LOG)\n"
 else
 
-# CPT_GEN is the set of files that cpptext runs the C preprocessor on.
-# They can include files from CPT_SRCS (defined below) since the cpptext
+# CPT_GEN is the set of files that cpphash runs the C preprocessor on.
+# They can include files from CPT_SRCS (defined below) since the cpphash
 # tool arranges that de-commented copies are included, not the originals.
 
 # CPT_GEN  ?= partitions.csv lily.yaml
@@ -111,7 +111,7 @@ endif
 # Use this to list subdirectories to #include yaml files from.
 ESPMAKE_DIRS ?= 
 
-# CPT_SRCS is the set of files that cpptext will remove hash-style
+# CPT_SRCS is the set of files that cpphash will remove hash-style
 # comments from while leaving any C preprocessor directives so that
 # the file can subsequently be used as a #include by one of the
 # CPT_GEN files.
@@ -160,14 +160,14 @@ CPT_EXTRA_DEFS += -D ESPMAKE_HOME=$(ESPMAKE_HOME)		\
 		  -D ESPMAKE_USER_NAME=$(USER)			\
 		  -D ESPMAKE_USER_$(USER)
 
-# This includes the cpptext Makefile fragment that will dehash yamls files.
-# In turn, it will include cpptext/esphome.mk which handles the esphome
+# This includes the cpphash Makefile fragment that will dehash yamls files.
+# In turn, it will include cpphash/esphome.mk which handles the esphome
 # file generation and platformio build steps.
 
-include $(CPT_HOME)/cpptext.mk
+include $(CPT_HOME)/cpphash.mk
 
 print-config:: $(ESP_INIT)
-	@printf "Makefile variables as processed by cpptext:\n"
+	@printf "Makefile variables as processed by cpphash:\n"
 	@printf "  ESPMAKE_PROJECT: $(ESPMAKE_PROJECT)\n"
 	@printf "  ESP_INIT: $(ESP_INIT)\n"
 	@printf "  CPT_GEN:  $(CPT_GEN)\n"

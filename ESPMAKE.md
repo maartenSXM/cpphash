@@ -84,14 +84,14 @@ Makefile.
 There are some aliases in file Bashrc which may be helpful for issuing
 esphome commands.  To dump the espmake config, try 'make print-config'.
 
-espmake uses a github project called cpptext
-(https://github.com/maartenSXM/cpptext) to remove hash-style comments
+espmake uses a github project called cpphash
+(https://github.com/maartenSXM/cpphash) to remove hash-style comments
 before running files through the c-preprocessor and it also
 uses it's Makefile fragments.
 
-cpptext leverages yq to merge multiple declaration of esphome sections
+cpphash leverages yq to merge multiple declaration of esphome sections
 such as "sensor:" or "switch:".  This allows #ifdefs to declare them
-in separate files conditionally and cpptext will merge them together for
+in separate files conditionally and cpphash will merge them together for
 processing by esphome.
 
 # Credits

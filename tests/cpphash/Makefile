@@ -3,14 +3,14 @@ ifeq ($(VIRTUAL_ENV),)
   $(warning Did you forgot to source esphome.git/venv/bin/activate?)
 endif
 
-# Y1 is run through cpptext and then esphome config > OUT1
+# Y1 is run through cpphash and then esphome config > OUT1
 # Y2 is only run through esphome config > OUT2
 
 Y1DIR:= ../lily
 Y1   := $(Y1DIR)/build/espmake.yaml
 Y2   := lilygo-tdisplays3-esphome.yaml
 
-OUT1 := /tmp/cpptext.$(shell echo $$PPID)
+OUT1 := /tmp/cpphash.$(shell echo $$PPID)
 OUT2 := /tmp/esphome.$(shell echo $$PPID)
 
 

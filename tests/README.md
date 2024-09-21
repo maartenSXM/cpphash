@@ -5,7 +5,7 @@ subdirectories containing some example and text commands
 ## cli
 
 The cli directory README domenstrates command line invocations of 
-dehash.sh and cpptext.sh.  It contains a text file containing some lines
+dehash.sh and cpphash.sh.  It contains a text file containing some lines
 that have hashes in them which need to be parsed in different ways.
 
 ## make

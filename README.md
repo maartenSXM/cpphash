@@ -1,11 +1,11 @@
-# cpptext.sh 
+# cpphash.sh 
 
 run the C preprocessor (cpp) on files with hash-style comments
 
 ## Usage
 ```
-./cpptext.sh [-f] [-C] [-v] [-h] [-t <dir>] [-D define|define=<x>] [-I includedir] cppFile [extraFiles]...
--t|--tempdir	argument is a directory for temporary files. Defaults is .cpptext
+./cpphash.sh [-f] [-C] [-v] [-h] [-t <dir>] [-D define|define=<x>] [-I includedir] cppFile [extraFiles]...
+-t|--tempdir	argument is a directory for temporary files. Defaults is .cpphash
 -D|--define>	add the argument as a define to pass to cpp
 -I|--include	add the argument as an include file directory to pass to cpp
 -o|--outfile	argument is a filename to write to.  Default is <cppFile>.cpp 
@@ -18,7 +18,7 @@ run the C preprocessor (cpp) on files with hash-style comments
 cppFile		the main file to run cpp on which optionally includes <extraFiles>.
 [extraFiles]	extra files to process that are #included by <cppFile>
 
-./cpptext.sh overwrites the file specified by -o (default is <cppFile>.cpp)
+./cpphash.sh overwrites the file specified by -o (default is <cppFile>.cpp)
 ```
 
 # dehash.sh
@@ -35,7 +35,7 @@ filename	file to dehash to stout or - for stdin
 ```
 
 dehash was originally written to remove hash-style comments in text files
-such as yaml that require the C-preprocessor for macro features. cpptext.sh
+such as yaml that require the C-preprocessor for macro features. cpphash.sh
 was added as a front-end for dehash.sh to do exactly that for any text files,
 including yaml.
 
@@ -46,7 +46,7 @@ Some possible dehash command variants are:
  ./dehash.sh -b example.txt
  ./dehash.sh -c -b example.txt
 ```
-Note: cpptext uses GNU sed, md5sum and yq.
+Note: cpphash uses GNU sed, md5sum and yq.
 
 If missing, yq can be installed on Linux with:
 
@@ -68,7 +68,7 @@ To use them, just copy them both into a project directory that does not
 already use makefiles.  If your project already does, then you likely
 already know how to integrate them to your project.
 
-There is an example in example/make that shows how to use make and cpptext
+There is an example in example/make that shows how to use make and cpphash
 to assist with managing multiple project variants that share text files.
 That example shows how to share constant #defines and configuration
 #defines between text files and C / C++ files. See the files main.yaml,
@@ -84,7 +84,7 @@ make MAIN=init.yaml
 
 ### OUTDIR
 
-Where to write generated files, including the cpptext repo itself.
+Where to write generated files, including the cpphash repo itself.
 Unlike the other user variables, it is set in "makefile".
 
 ### MAIN
@@ -111,7 +111,7 @@ the directories dpecified by DIRS
 
 ### PREFIX
 
-cpptext.mk generates a single filename named <PREFIX><PROJTAG>.
+cpphash.mk generates a single filename named <PREFIX><PROJTAG>.
 PREFIX defaults to "./myProj_"
 
 ### PROJTAG
@@ -129,11 +129,11 @@ text sources can vary the generated file using #if directives such as:
 # yaml code only for project foo goes here
 #endif
 Some other C preprocessor defines are passed as well.  They can be
-found by reviewing the CPPDEFS definition in cpptext/cpptext.mk.
+found by reviewing the CPPDEFS definition in cpphash/cpphash.mk.
 ```
 
 ## Generated files
-cpptext.mk generates output file <OUTDIR>/<PREFIX><PROJTAG>.<SUFFIX>
+cpphash.mk generates output file <OUTDIR>/<PREFIX><PROJTAG>.<SUFFIX>
 Intermediate C-preprocessed files used to generate it are stored in
 directory <OUTDIR>/<PREFIX><PROJTAG>/
 
@@ -144,7 +144,7 @@ Both can be deleted using 'make clean'.
 There are some additional comments describing cpptest features in
 Makefile.
 
-You will note that cpptext.mk uses dehash.sh to remove the
+You will note that cpphash.mk uses dehash.sh to remove the
 hash-style comments before running the files through the c-preprocessor.
 It leverages a sed script to do that and sets up dehash.sh flags 
 to leave the C preprocessor directives.
@@ -164,7 +164,7 @@ configuration & build and also as used in the test subdirectory.
 
 # Disclaimers
 
-The author has not attempted to use cpptext with Visual Studio.
+The author has not attempted to use cpphash with Visual Studio.
 
 # MacOS Note
 

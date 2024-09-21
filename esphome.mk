@@ -1,11 +1,11 @@
 # This makefile will skip espmake.yaml compilation when espmake.yaml 
 # is unchanged from a previous build.
 
-# The including Makefile should include cpptext.mk, which in turn
+# The including Makefile should include cpphash.mk, which in turn
 # includes this file automatically, when make runs in an esphome venv.
 
 # Note: the including Makefile must define ESP_INIT to an output of
-# cpptext.mk (i.e. it is one of the generated files listed
+# cpphash.mk (i.e. it is one of the generated files listed
 # in CPT_GEN).
 
 # The including Makefile can also define ESP_YAML to the name of the yaml

@@ -1,13 +1,13 @@
-# cpptext.mk is from https://github.com/maartenSXM/cpptext.
+# cpphash.mk is from https://github.com/maartenSXM/cpphash.
 #
 # This file is intended to be included from your project Makefile and
-# depends on $(CPT_HOME) being a git clone of github.com/maartenSXM/cpptext.
+# depends on $(CPT_HOME) being a git clone of github.com/maartenSXM/cpphash.
 #
-# See https://github.com/maartenSXM/cpptext/blob/main/Makefile for
+# See https://github.com/maartenSXM/cpphash/blob/main/Makefile for
 # an example of how to automatically setup this repo as a submodule
 # and include this file from a Makefile.
 #
-# Refer to https://github.com/maartenSXM/cpptext/blob/main/README.md
+# Refer to https://github.com/maartenSXM/cpphash/blob/main/README.md
 # for more details.
 
 MAKEFLAGS    += --no-builtin-rules
@@ -15,7 +15,7 @@ MAKEFLAGS    += --no-builtin-variables
 MAKECMDGOALS ?= all
 
 # These can be optionally overridden in a project Makefile that
-# includes this cpptext.mk file. 
+# includes this cpphash.mk file. 
 
 # set some defaults for unset simply expanded variables
 
@@ -117,7 +117,7 @@ endif
 all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
 
 define _uptodate
-  printf "cpptext.mk: $(1) is up to date.\n";
+  printf "cpphash.mk: $(1) is up to date.\n";
 endef
 
 cppTgt: $(CPT_INFILES) $(CPT_OUTFILES)

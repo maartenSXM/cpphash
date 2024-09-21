@@ -26,7 +26,7 @@ Usage: $name [-f] [-w] [-W] [-v] [-n] [-h] [-t <dir>]
 
  -D		 Set defines for cpp. Argument required.
  -I		 Set include file directories for cpp. Argument required.
- -t|--tempdir    Set the temporary file directory. Defaults to \".cpptext/\".
+ -t|--tempdir    Set the temporary file directory. Defaults to \".cpphash/\".
  -o|--outfile    Set the output file name. Default is <cppFile>.cpp.
                  (Use \"-o -\" for stdout).
  -y|--yaml-merge after cpp-ing, merge duplicate yaml map keys in <cppFile>.
@@ -46,7 +46,7 @@ Please note that $name overwrites the output file which defaults to
 and -I are positional and so there must be a space between -D and -I
 and their arguments.
 
-This script is from git repo github.com/maartenSXM/cpptext.
+This script is from git repo github.com/maartenSXM/cpphash.
 Note: this script does not vet arguments securely. Do not setuid or host it.
 "
 
@@ -55,7 +55,7 @@ wipe=0
 wipeonly=0
 verbose=0
 force=0
-tempdir=.cpptext
+tempdir=.cpphash
 
 gcc="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror"
 

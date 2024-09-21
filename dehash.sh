@@ -20,7 +20,7 @@ Usage: `basename $0` [-c] [-b] [-h] file
   -h|--help\thelp.
 <file> is the file to dehash to stout (or - for stdin).
 
-This script is from git repo github.com/maartenSXM/cpptext.
+This script is from git repo github.com/maartenSXM/cpphash.
 Note: this script does not vet arguments securely. Do not setuid or host it.
 "
 
