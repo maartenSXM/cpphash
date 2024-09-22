@@ -38,7 +38,7 @@ if [ ! -d $ESPMAKE_PRJ_VENV ]; then
   return 1
 fi
 
-if [[ "$VIRTUAL_ENV" == "" ]]
+if [[ "$VIRTUAL_ENV" == "" ]]; then
   source "$ESPMAKE_PRJ_VENV"/bin/activate
 fi
 
