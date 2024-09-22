@@ -17,8 +17,8 @@ dehash="$scriptpath/dehash.sh -c"
 postcpp=cat
 yamlmerge="$scriptpath/yamlmerge.sh"
 
-help="$name: run the Gnu C preprocessor (cpp) on files with hash-style
-      comments by de-hashing them first.
+usage="$name: run the Gnu C preprocessor (cpp) on files with hash-style
+\tcomments by de-hashing them first.
 
 Usage: $name [-f] [-w] [-W] [-v] [-n] [-h] [-t <dir>]
        [-D <define>|<define>=<x>]... [-I <includeDir>]...
@@ -73,7 +73,7 @@ do
     -C|--wipe-only)  wipe=1; wipeonly=1; shift;; 
     -v|--verbose)    verbose=1; shift;; 
     -n|--no-exec)    doit=0; verbose=1; shift;; 
-    -h|--help)       echo -e "$help"; exit 0;; 
+    -h|--help)       printf "$usage"; exit 0;; 
     *) break
   esac
 done

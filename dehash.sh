@@ -11,9 +11,9 @@ else
   fi
 fi
 
-HELP="`basename $0` removes '#'-style comments
+declare -r usage="`basename $0`: strip hash-style comments
 
-Usage: `basename $0` [-c] [-b] [-h] file
+Usage: `basename $0` [-c] [-b] [-h] file\n
   -c|--cpp\tkeep CPP directives.
   -b|--blank\tkeep blank lines.
   -o|--out)\toutfile file (or - for stdout)
@@ -30,7 +30,7 @@ do
     -c|--cpp)	GCCFLAGS="$GCCFLAGS -DCPP"; shift;;
     -o|--out)	outfile="$2"; shift 2;;
     -b|--blank)	GCCFLAGS="$GCCFLAGS -DBLANK"; shift;; 
-    -h|--help)	echo -e "$HELP"; shift;; 
+    -h|--help)	printf "$usage"; exit 0;;
     *) break
   esac
 done

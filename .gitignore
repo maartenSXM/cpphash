@@ -7,6 +7,6 @@ examples/README.md
 examples/test/.esphome/
 examples/make/.esphome/
 *.bak
-*/.espmake_prj
-*/.espmake_all
+*/.cpphash_prj
+*/.cpphash_prj_all
 

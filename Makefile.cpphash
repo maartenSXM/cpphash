@@ -3,10 +3,10 @@ _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # This Makefile is from https://github.com/maartenSXM/cpphash
 
-# Copy it to an esphome project directory to enable that esphome
-# yaml to be processed by the C pre-processor. It can be run
-# using make -f Makefile.espmake.  Alternatively, it can be renamed
-# Makefile to avoid having to specify the the -f option.
+# Copy it to any project directory to enable source files with hash-style
+# comments in that directory to be processed by the C pre-processor.
+# It can be run using make -f Makefile.cpphash.  Alternatively, it can
+# be renamed Makefile to avoid having to specify the the -f option.
 
 # There are some pre-defined C pre-processor defines that your
 # esphome yaml can use with #ifdef etc. See CPT_EXTRA_DEFS below.
@@ -14,14 +14,19 @@ _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 # Refer to https://github.com/maartenSXM/cpphash/blob/main/README.md
 # for more details.
 
-# To setup cpphash for one esphome project, copy it into the esphome project
-# directory and run cpphash/install.sh from the esphome project directory.
+# To setup cpphash for one project, clone it into the that project
+# directory and install it with:
 
-# To share cpphash and its esphome venv across multiple esphome project
-# directories, clone it in a common location and run install.sh from that
-# directory to set it up. Then, in each each project directory, copy
-# this Makefile.espmake there and individually set CPT_HOME
-# to the common location where cpphash was installed
+#   cpphash/install.sh -y -s
+
+# To share cpphash across multiple esphome project directories, clone
+# it in a common location and install it from that directory with
+
+#   ./install.sh -y -s
+
+# Then, in each each project directory, copy Makefile.cpphash there and
+# individually set CPT_HOME to the common location where the shared
+# cpphash is installed by uncommenting the following line:
 
 # CPT_HOME:=/my/shared/cpphash
 
@@ -59,7 +64,7 @@ else
   ifneq (,$(wildcard .cpphash_prj))
     PRJ := $(shell cat .cpphash_prj)
   else
-    $(info  $(MAKEFILE): Specifiy an esphome yaml file with PRJ=. Like this:)
+    $(info  $(MAKEFILE): Specifiy an text with PRJ=. Like this:)
     $(error $(MAKEFILE):   make PRJ=./esphome.yaml)
   endif
 endif
@@ -70,73 +75,67 @@ ifeq (,$(wildcard $(PRJ))) # check specified initial file exists
 endif
 
 # set the variable that cpphash/cpphash.mk uses
-ESP_INIT = $(PRJ)
+TXT_INIT = $(PRJ)
 
-ESPMAKE_PRJ_PATH = $(PRJ)
-ESPMAKE_PRJ_DIR  = $(patsubst %/,%,$(dir $(PRJ)))
-ESPMAKE_PROJECT  = $(basename $(notdir $(ESPMAKE_PRJ_PATH)))
+TXTMAKE_PRJ_PATH = $(PRJ)
+TXTMAKE_PRJ_DIR  = $(patsubst %/,%,$(dir $(PRJ)))
+TXTMAKE_PROJECT  = $(basename $(notdir $(TXTMAKE_PRJ_PATH)))
 
-ifeq (,$(wildcard build/$(ESPMAKE_PROJECT)))
-  $(shell mkdir -p build/$(ESPMAKE_PROJECT))
+ifeq (,$(wildcard build/$(TXTMAKE_PROJECT)))
+  $(shell mkdir -p build/$(TXTMAKE_PROJECT))
 endif
 
-# CPT_BUILD_DIR is where ESPMAKE projects are built. If changed, review
-# the definition of ESPMAKE_TOP below.  It declares the relative path to
+# CPT_BUILD_DIR is where TXTMAKE projects are built. If changed, review
+# the definition of TXTMAKE_TOP below.  It declares the relative path to
 # the esphome project directory from CPT_BUILD_DIR. This is done manually
 # because realpath does not support the --relative-to option on many
 # non-Linux OSs.
 
-CPT_BUILD_DIR = ./build/$(ESPMAKE_PROJECT))
+CPT_BUILD_DIR = ./build/$(TXTMAKE_PROJECT))
 
 BUILD_LOG = $(CPT_BUILD_DIR)/makeall.log
 
 # restart 'make all' with logging to $(CPT_BUILD_DIR)/build.log and console
 
-# Optionally, use ESPMAKE_AUTOLOG_STDOUT_ONLY=1 on the make command line if you
+# Optionally, use TXTMAKE_AUTOLOG_STDOUT_ONLY=1 on the make command line if you
 # want stderr to not go to the log.  That is useful for paging through any
 # errors on the command line using:
-#    make ESPMAKE_AUTOLOG_STDOUT_ONLY=1 2>&1 >/dev/null | more
+#    make TXTMAKE_AUTOLOG_STDOUT_ONLY=1 2>&1 >/dev/null | more
 
-ifeq (all,$(ESPMAKE_AUTOLOG)$(MAKECMDGOALS))
+ifeq (all,$(TXTMAKE_AUTOLOG)$(MAKECMDGOALS))
 all:
-ifneq (,$(ESPMAKE_AUTOLOG_STDOUT_ONLY))
-	@$(MAKE) -k ESPMAKE_AUTOLOG=1 $(MAKECMDGOALS) | tee $(BUILD_LOG)
+ifneq (,$(TXTMAKE_AUTOLOG_STDOUT_ONLY))
+	@$(MAKE) -k TXTMAKE_AUTOLOG=1 $(MAKECMDGOALS) | tee $(BUILD_LOG)
 else
-	@$(MAKE) -k ESPMAKE_AUTOLOG=1 $(MAKECMDGOALS) 2>&1 | tee $(BUILD_LOG)
+	@$(MAKE) -k TXTMAKE_AUTOLOG=1 $(MAKECMDGOALS) 2>&1 | tee $(BUILD_LOG)
 endif
-	@printf "Makefile: \"make all\" log is $(ESPMAKE_BUILD_LOG)\n"
+	@printf "Makefile: \"make all\" log is $(TXTMAKE_BUILD_LOG)\n"
 else
 
 # CPT_GEN is the set of files that cpphash runs the C preprocessor on.
 # They can include files from CPT_SRCS (defined below) since the cpphash
 # tool arranges that de-commented copies are included, not the originals.
 
-# CPT_GEN  ?= partitions.csv lily.yaml
-CPT_GEN  ?= $(ESP_INIT)
-
-# if there is a secrets.yaml beside $(ESP_INIT), run it through cpp too
-ifneq (,$(wildcard $(dir $(ESP_INIT))secrets.yaml))
-  CPT_GEN += $(dir $(ESP_INIT))secrets.yaml
-endif
+CPT_GEN  ?= $(TXT_INIT)
 
 # Use this to list subdirectories to #include yaml files from.
-ESPMAKE_DIRS ?= 
+TXTMAKE_DIRS ?= 
 
 # CPT_SRCS is the set of files that cpphash will remove hash-style
 # comments from while leaving any C preprocessor directives so that
 # the file can subsequently be used as a #include by one of the
 # CPT_GEN files.
 
-# Builds the list of CPT_SRCS by looking for .yaml files in $(ESPMAKE_DIRS).
+# Builds the list of CPT_SRCS by looking for .yaml files in $(TXTMAKE_DIRS).
 
-CPT_SRCS += $(sort $(foreach d,$(ESPMAKE_DIRS),$(wildcard $(d)/*.yaml)) $(CPT_GEN))
+CPT_SRCS += $(sort $(foreach d,$(TXTMAKE_DIRS),$(wildcard $(d)/*.yaml)) $(CPT_GEN))
 
 # In addition to updates to $(CPT_SRCS) triggering a rebuild of espmake.yaml,
-# updates to source files in $(ESP_DEPS) are also triggers.
+# updates to source files in $(TXT_DEPS) are also triggers.
 
-ESPMAKE_DEPS ?= 
+TXTMAKE_DEPS ?= 
 
-ESP_DEPS += $(foreach d,$(ESPMAKE_DEPS),$(wildcard $(d)/*.c) \
+TXT_DEPS += $(foreach d,$(TXTMAKE_DEPS),$(wildcard $(d)/*.c) \
 		$(wildcard $(d)/*.cpp) $(wildcard $(d)/*.h))
 
 # If there is a secrets.h file in ./ or ../, use it
@@ -155,20 +154,20 @@ endif
 # directories come after -I build/<project>/dehashed so
 # includes of yaml files are taken from there.
 
-CPT_EXTRA_INCS += $(foreach d,$(ESPMAKE_DIRS),-I $(d))
+CPT_EXTRA_INCS += $(foreach d,$(TXTMAKE_DIRS),-I $(d))
 
 # These #defines are for project adapation. 
 
-# ESPMAKE_TOP is how to get from the build directory back to
+# TXTMAKE_TOP is how to get from the build directory back to
 # the esphome project directory. It is relative from CPT_BUILD_DIR.
 
-CPT_EXTRA_DEFS += -D ESPMAKE_TOP=../..				\
-		  -D ESPMAKE_BUILD_PATH=$(CPT_BUILD_DIR)	\
-		  -D ESPMAKE_PRJ_DIR=$(ESPMAKE_PRJ_DIR)		\
-		  -D ESPMAKE_PROJECT_NAME=$(ESPMAKE_PROJECT)	\
-		  -D ESPMAKE_PROJECT_$(ESPMAKE_PROJECT)		\
-		  -D ESPMAKE_USER_NAME=$(USER)			\
-		  -D ESPMAKE_USER_$(USER)
+CPT_EXTRA_DEFS += -D TXTMAKE_TOP=../..				\
+		  -D TXTMAKE_BUILD_PATH=$(CPT_BUILD_DIR)	\
+		  -D TXTMAKE_PRJ_DIR=$(TXTMAKE_PRJ_DIR)		\
+		  -D TXTMAKE_PROJECT_NAME=$(TXTMAKE_PROJECT)	\
+		  -D TXTMAKE_PROJECT_$(TXTMAKE_PROJECT)		\
+		  -D TXTMAKE_USER_NAME=$(USER)			\
+		  -D TXTMAKE_USER_$(USER)
 
 # This includes the cpphash Makefile fragment that will dehash yamls files.
 # In turn, it will include cpphash/esphome.mk which handles the esphome
@@ -176,15 +175,15 @@ CPT_EXTRA_DEFS += -D ESPMAKE_TOP=../..				\
 
 include $(CPT_HOME)/cpphash.mk
 
-print-config:: $(ESP_INIT)
+print-config:: $(TXT_INIT)
 	@printf "Makefile variables as processed by cpphash:\n"
-	@printf "  ESPMAKE_PROJECT: $(ESPMAKE_PROJECT)\n"
-	@printf "  ESP_INIT: $(ESP_INIT)\n"
+	@printf "  TXTMAKE_PROJECT: $(TXTMAKE_PROJECT)\n"
+	@printf "  TXT_INIT: $(TXT_INIT)\n"
 	@printf "  CPT_GEN:  $(CPT_GEN)\n"
 	@printf "  CPT_SRCS:\n"
 	@$(foreach f,$(CPT_INFILES),printf "    $(f)\n";)
-	@printf "  ESP_DEPS:\n"
-	@$(foreach f,$(ESP_DEPS),printf "    $(f)\n";)
+	@printf "  TXT_DEPS:\n"
+	@$(foreach f,$(TXT_DEPS),printf "    $(f)\n";)
 	@printf "Makefile #defines available to yaml files:"
 	@printf "  $(subst -, ,$(subst -D,#define,$(CPT_EXTRA_DEFS)))\n" | sed -e 's/ #/\n  #/g' -e 's/=/ /g'
 	@printf "For #defaults available to yaml files, "

@@ -35,17 +35,20 @@ some convenience aliases that can be found in Bashrc.
 
 ## Installation
 
-espmake is basically just a Makefile which is manually copied into an
-existing esphome project directory and renamed "Makefile" to enable the
-make command to be run without arguments indicating the name of the
-Makefile to process.
+To add espmake to an existing esphome project directory, just 
+git clone htpps://github.com/maartenSXM/cpphash.git from that
+directory and then run ./cpphash/install.sh.
 
-Note that this manual installation procedure assumes that the destination
-project doesn't have a Makefile already. If it does, the rename can be
-skipped espmake can be used with 'make -f Makefile.espmake'.
+Then cpphash/Makefile.espmake can be copied to the current directory
+like this:
+ cp -i cpphash/Makefile.espmake ./Makefile
+Note, do not do this is there is already a Makefile in the esphome
+project directory as it will be overwritten.  Save it first.
 
-To use espmake, activate the esphome venv environment and then source the
-espmake/Bashrc, which will set ESPMAKE_HOME and define some convenience
+Before building, do this to activate the esphome virtual environment:
+ source cpphash/Bashrc
+
+cpphash/Bashrc will set ESPMAKE_HOME and define some convenience
 aliases. This bash alias may be useful to place in ~/.bashrc, 
 alias espmake='source ~/git/esphome/venv/bin/activate; cd ~/git/espmake; source
  ./Bashrc; cd myProject'
@@ -58,7 +61,7 @@ editting the Makefile or overriding them with an argument to make such as
 make PRJ=init.yaml
 ```
 espmake will remember the PRJ setting by storing it in
-ESPMAKE_HOME/.espmake_project so that it does not have to be specified
+ESPMAKE_HOME/.cpphash_prj so that it does not have to be specified
 afterwards.
 
 ### PRJ
@@ -69,7 +72,7 @@ espmake and then copy the Makefile to the same directory as your
 esphome.yaml and type make.  If your esphome yaml file is called
 something else, use "make PRJ=<esphome yaml file>.  After specifyiong
 PRJ= once, espmake will remember it since it stashes it in
-$ESPMAKE_HOME/.espmake_project.
+$ESPMAKE_HOME/.cpphash_prj.
 
 ## Generated files
 

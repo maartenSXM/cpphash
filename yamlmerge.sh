@@ -10,9 +10,9 @@ declare -i status
 declare -r me=${0##*/}  # basename of this script
 declare -r cpphashDir=$(dirname "$0")
 
-HELP="$me: merges duplicate map keys in non-compliant yaml
+declare -r usage="$me: merges duplicate map keys in non-compliant yaml
 
-Usage: $me: [-okseEqh] [-o outfile] <file.yaml>
+Usage: $me: [-okseEqh] [-o outfile] <file.yaml>\n
   -o|--outfile\tFile to write to, else stdout.
   -k|--keep\tKeep yaml comments.
   -s|--sort\tSort the map keys.
@@ -47,7 +47,7 @@ while [[ $# > 0 ]]
 do
   case $1 in
     -o|--out)	outfile="$2"; shift 2;;
-    -h|--help)	echo $HELP; exit 0;;
+    -h|--help)	printf "$usage"; exit 0;;
     -k|--keep)  decomment=cat; shift 1;;
     -s|--sort)  yqsort=YQSORT; shift 1;;
     -e|--esphoist) esphoist=ESPHOIST; shift 1;;

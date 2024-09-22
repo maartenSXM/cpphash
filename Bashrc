@@ -1,100 +1,167 @@
-# Activate espmake under bash using 'esp_setup' and then you will have
-# ESPMAKE_HOME defined correctly and also some convenience aliases.
-# See the section below titled "Convenience aliases" to see what they do.
+# Source this file from your project home directory to get
+# some convenience aliases that can be listed with "esp_help".
 
-# The directory where this file lives is stashed in ESPMAKE_HOME
-export ESPMAKE_HOME=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# setup some defaults for below
 
-alias esp_setup='cd "$ESPMAKE_HOME"; source ./Bashrc'
+# if CPT_HOME is not set, default to the directory that this Bashrc is in
 
-# venv is recommended (needed for the dev environment).  Edit the path.
-alias esp_venv='source ~/git/esphome/venv/bin/activate; esp_setup'
-
-# set your espmake project IP addresses here.
-
-export _ESP_IP0=192.168.248.10
-export _ESP_IP1=192.168.248.11
-
-# or, by user, if you are sharing this Bashrc, here:
-if [ "$USER" == "maarten" ]; then
-  export _ESP_IP0=192.168.248.20
-  export _ESP_IP1=192.168.248.21
+if [[ "$CPT_HOME" == "" ]]; then
+  export CPT_HOME=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 fi
 
-# This is a helper function that returns the path to the build
-# directory of the last project built. Example: $ESPMAKE_HOME/build/espinit
-_ESP_LAST_BUILD() {
-    echo "${ESPMAKE_HOME}/build/$(basename $(dirname $(cat $ESPMAKE_HOME/.espmake_project)))_$(basename $(cat $ESPMAKE_HOME/.espmake_project) .mk)"
+if [ ! -f $CPT_HOME/cpphash.mk ]; then
+  echo "$CPT_HOME not found. Did you run install.sh?"
+  return 1
+fi
+
+if [[ "$ESPMAKE_PREFIX" == "" ]]; then
+  ESPMAKE_PREFIX="esp_"
+fi
+if [[ "$ESPMAKE_PRJ_HOME" == "" ]]; then
+  ESPMAKE_PRJ_HOME="$(pwd)"
+fi
+if [[ "$ESPMAKE_PRJ_LAST" == "" ]]; then
+  ESPMAKE_PRJ_LAST="$ESPMAKE_PRJ_HOME/.cpphash_prj"
+fi
+if [[ "$ESPMAKE_PRJ_ALL" == "" ]]; then
+  ESPMAKE_PRJ_ALL="$ESPMAKE_PRJ_HOME/.cpphash_prj_all"
+fi
+if [[ "$ESPMAKE_PRJ_VENV" == "" ]]; then
+  $ESPMAKE_PRJ_VENV="$CPT_HOME/venv"
+fi
+
+if [ ! -d $ESPMAKE_PRJ_VENV ]; then
+  echo "$ESPMAKE_PRJ_VENV not found. Did you run install.sh?"
+  return 1
+fi
+
+if [[ "$VIRTUAL_ENV" == "" ]]
+  source "$ESPMAKE_PRJ_VENV"
+fi
+
+# Set your espmake project IP and TTY addresses here.
+# Only two of each are support by default. More can
+# be added by manually editting this file, at least for now.
+
+# These can be set for a specific user if you are sharing
+# a GrowOS project, like this:
+
+if [[ "$_ESPMAKE_IP0" == "" && "$USER" == "maarten" ]]; then
+  _ESPMAKE_IP0=192.168.248.20
+fi
+if [[ "$_ESPMAKE_IP1" == "" && "$USER" == "maarten" ]]; then
+  _ESPMAKE_IP1=192.168.248.21
+fi
+
+# These are the defaults for IP addresses and serial port names
+
+if [[ "$_ESPMAKE_IP0" == "" ]]; then
+  _ESPMAKE_IP0=192.168.248.10
+fi
+if [[ "$_ESPMAKE_IP1" == "" ]]; then
+  _ESPMAKE_IP1=192.168.248.11
+fi
+if [[ "$_ESPMAKE_DEV0" == "" ]]; then
+  _ESPMAKE_DEV0=/dev/ttyACM0
+fi
+if [[ "$_ESPMAKE_DEV1" == "" ]]; then
+  _ESPMAKE_DEV0=/dev/ttyACM1
+fi
+
+
+# Helper function that returns the path to the build directory
+# of the last project built. Example: $ESPMAKE_PRJ_HOME/build/espinit
+
+_ESPMAKE_LAST_BUILD() {
+    echo "${ESPMAKE_PRJ_HOME}/build/$(basename $(dirname $(cat $ESPMAKE_PRJ_LAST)))_$(basename $(cat $ESPMAKE_PRJ_LAST) .mk)"
 }
 
-# This is a helper function that returns the name of the esphome
-# device as specified in espmake.yaml "esphome:" component entry "name:".
+# Helper function that returns the name of the esphome device as
+# specified in espmake.yaml "esphome:" component entry "name:".
 # Example: lilygot4s3
-_ESP_LAST_ESPNAME() {
-    echo $(yq -r --no-doc .esphome.name $(_ESP_LAST_BUILD)/espmake.yaml | grep -v null)
+
+_ESPMAKE_LAST_ESPNAME() {
+    echo $(yq -r --no-doc .esphome.name $(_ESPMAKE_LAST_BUILD)/espmake.yaml | grep -v null)
 }
 
-# helper alias that takes an esphome verb and a ACM device number and
+# Helper alias that takes an esphome verb and a ACM device number and
 # issues it on the last built project.
-alias _ESP_ESP_USB='function _ESP_ESP_USB { _VERB=${1}; _DEV=${2}; cd $(_ESP_LAST_BUILD); esphome -v ${_VERB} --device /dev/ttyACM${_DEV} espmake.yaml; cd -;}; _ESP_ESP_USB'
 
-# helper alias to upload last project using OTA update to IP _ESP_IP<arg>
+alias _ESPMAKE_USB='function _ESPMAKE_USB { _VERB=${1}; _DEV=${2}; cd $(_ESPMAKE_LAST_BUILD); esphome -v ${_VERB} --device ${_DEV} espmake.yaml; cd -;}; _ESPMAKE_USB'
+
+# Helper alias to upload last project using OTA update to IP _ESPMAKE_IP<arg>
 # Note the indirect variable reference ${!_IP} to choose the _IP 
-alias _ESP_ESP_UPLOAD='function _ESP_ESP_UPLOAD { _IPNUM=${1}; _IP=_ESP_IP${_IPNUM}; esphome -v upload --device ${!_IP} --file $(_ESP_LAST_BUILD)/.esphome/build/$(_ESP_LAST_ESPNAME)/.pioenvs/$(_ESP_LAST_ESPNAME)/firmware.bin $(_ESP_LAST_BUILD)/espmake.yaml;}; _ESP_ESP_UPLOAD'
 
-# _ESP_IDF_JTAG uses esp_idf directly to burn firmware to /dev/ttyACM0
+alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { _IPNUM=${1}; _IP=_ESPMAKE_IP${_IPNUM}; esphome -v upload --device ${!_IP} --file $(_ESPMAKE_LAST_BUILD)/.esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin $(_ESPMAKE_LAST_BUILD)/espmake.yaml;}; _ESPMAKE_UPLOAD'
+
+# _ESPMAKE_IDF_JTAG uses esp-idf directly to burn firmware to /dev/ttyACM0
+
 export ESPTOOL_TESTING=1 # as per esptool/esp32s2.py
-alias _ESP_IDF_JTAG='(cd $(_ESP_LAST_BUILD)/.esphome/build/$(_ESP_LAST_ESPNAME)/.pioenvs/$(_ESP_LAST_ESPNAME) && esptool.py --before default_reset --after no_reset --baud 1500000 --port /dev/ttyACM0 --chip esp32s2 write_flash -z --flash_size detect 0x10000 firmware.bin 0x1000 bootloader.bin 0x8000 partitions.bin 0x9000 ota_data_initial.bin)'
+alias _ESPMAKE_IDF_JTAG='(cd $(_ESPMAKE_LAST_BUILD)/.esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME) && esptool.py --before default_reset --after no_reset --baud 1500000 --port $_ESPMAKE_DEV0 --chip esp32s2 write_flash -z --flash_size detect 0x10000 firmware.bin 0x1000 bootloader.bin 0x8000 partitions.bin 0x9000 ota_data_initial.bin)'
 
 # Convenience aliases
 
-# Aliases to provide the list of aliases :-)
-alias esp_help='alias | grep esp_'
-alias esp_aliases='alias | grep esp_'
+alias ${ESPMAKE_PREFIX}venv='source $ESPMAKE_PRJ_VENV/bin/activate'
 
-# Aliases to upload for the last project to IP _ESP_IP0 or _ESP_IP1
-alias esp_upload0="_ESP_ESP_UPLOAD 0"
-alias esp_upload1="_ESP_ESP_UPLOAD 1"
-alias esp_upload="esp_upload0"
+# Alias to provide the list of aliases :-)
+
+alias ${ESPMAKE_PREFIX}help="alias | grep -E ${ESPMAKE_PREFIX}\|esp_"
+
+# Alias to list all espmake projects specified with PRJ= 
+alias ${ESPMAKE_PREFIX}projects="cat $ESPMAKE_PRJ_ALL"
+
+# Aliases to upload for the last project to IP _ESPMAKE_IP0 or _ESPMAKE_IP1
+alias ${ESPMAKE_PREFIX}upload0="_ESPMAKE_UPLOAD 0"
+alias ${ESPMAKE_PREFIX}upload1="_ESPMAKE_UPLOAD 1"
+alias ${ESPMAKE_PREFIX}upload="${ESPMAKE_PREFIX}upload0"
 
 # Aliases to upload the last project to /dev/ttyACM0 or /dev/ttyACM1
-alias esp_jtag0="_ESP_ESP_USB upload 0"
-alias esp_jtag1="_ESP_ESP_USB upload 1"
-alias esp_jtag="esp_jtag0"
+
+alias ${ESPMAKE_PREFIX}jtag0="_ESPMAKE_USB upload $_ESPMAKE_DEV0"
+alias ${ESPMAKE_PREFIX}jtag1="_ESPMAKE_USB upload $_ESPMAKE_DEV1"
+alias ${ESPMAKE_PREFIX}jtag="${ESPMAKE_PREFIX}jtag0"
 
 # Aliases to monitor logs on /dev/ttyACM0 or /dev/ttyACM1
-alias esp_logs0="_ESP_ESP_USB logs 0"
-alias esp_logs1="_ESP_ESP_USB logs 1"
-alias esp_logs="esp_logs0"
 
-# Alias esp_make builds the current project
-alias esp_make='make -C $ESPMAKE_HOME'
+alias ${ESPMAKE_PREFIX}logs0="_ESPMAKE_USB logs 0"
+alias ${ESPMAKE_PREFIX}logs1="_ESPMAKE_USB logs 1"
+alias ${ESPMAKE_PREFIX}logs="${ESPMAKE_PREFIX}logs0"
+
+# Alias to build the current project
+
+alias ${ESPMAKE_PREFIX}make='make -C $ESPMAKE_PRJ_HOME'
 
 # Aliases to cd to common directories
-alias esp_home='cd $ESPMAKE_HOME'
-alias esp_project='cd $ESPMAKE_HOME/$(dirname $(cat $ESPMAKE_HOME/.espmake_project))'
-alias esp_build='cd $(_ESP_LAST_BUILD)'
+
+alias ${ESPMAKE_PREFIX}home='cd $ESPMAKE_PRJ_HOME'
+alias ${ESPMAKE_PREFIX}project='cd $ESPMAKE_PRJ_HOME/$(dirname $(cat $ESPMAKE_PRJ_LAST))'
+alias ${ESPMAKE_PREFIX}build='cd $(_ESPMAKE_LAST_BUILD)'
 
 # Aliases to view to common artifacts
-alias esp_log='view $(_ESP_LAST_BUILD)/makeall.log'
-alias esp_yaml='view $(_ESP_LAST_BUILD)/espmake.yaml'
+
+alias ${ESPMAKE_PREFIX}log='view $(_ESPMAKE_LAST_BUILD)/makeall.log'
+alias ${ESPMAKE_PREFIX}espmake='view $(_ESPMAKE_LAST_BUILD)/espmake.yaml'
+alias ${ESPMAKE_PREFIX}esphome='view $(_ESPMAKE_LAST_BUILD)/esphome.yaml'
 
 # Aliases to find strings including or excluding the build directory
-alias esp_search="find $ESPMAKE_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path './build/*' -type f -print0 | xargs -0 grep -i"
-alias esp_search_all="find $ESPMAKE_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
-alias esp_search_here="find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
+
+alias ${ESPMAKE_PREFIX}search="find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
+alias ${ESPMAKE_PREFIX}search_home="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path './build/*' ! -path '*/cpphash/*' -type f -print0 | xargs -0 grep -i"
+alias ${ESPMAKE_PREFIX}search_all="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
 
 # Aliases to search for arg1 and replace it with arg2 in all files.
 # Backup files are stored in <file>.bak.  There are variants for arg1
 # not containing hash, comma and slash. The default is no slash.
+# bash does not seem to allow these to be defined with ESPMAKE_PREFIX.
+
 esp_replace_nohash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build*' ! -path '*/cppHash*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s#$1#$2#g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s#$1#$2#g"
 }
 esp_replace_nocomma() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build*' ! -path '*/cppHash*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s,$1,$2,g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s,$1,$2,g"
 }
 esp_replace_noslash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build*' ! -path '*/cppHash*' ! -path '*/.esphome*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s/$1/$2/g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s/$1/$2/g"
 }
-alias esp_replace='esp_replace_noslash'
+alias esp_replace="esp_replace_noslash"
 
