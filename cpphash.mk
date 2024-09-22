@@ -1,7 +1,7 @@
 # cpphash.mk is from https://github.com/maartenSXM/cpphash.
 #
 # This file is intended to be included from your project Makefile and
-# depends on $(CPT_HOME) being a git clone of github.com/maartenSXM/cpphash.
+# depends on $(CH_HOME) being a git clone of github.com/maartenSXM/cpphash.
 #
 # See https://github.com/maartenSXM/cpphash/blob/main/Makefile for
 # an example of how to automatically setup this repo as a submodule
@@ -19,35 +19,35 @@ MAKECMDGOALS ?= all
 
 # set some defaults for unset simply expanded variables
 
-ifeq (,$(CPT_HOME))
-CPT_HOME := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
+ifeq (,$(CH_HOME))
+CH_HOME := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 endif
-ifeq (,$(CPT_BUILD_DIR))
-CPT_BUILD_DIR := build
+ifeq (,$(CH_BUILD_DIR))
+CH_BUILD_DIR := build
 endif
-ifeq (,$(CPT_TMP_SUBDIR))
-CPT_TMP_SUBDIR := dehashed
+ifeq (,$(CH_TMP_SUBDIR))
+CH_TMP_SUBDIR := dehashed
 endif
 
 # Use these overrides to specify dependencies that customize the build
-CPT_PRE_TGT  ?= 
-CPT_MAIN_TGT ?= cppTgt
-CPT_POST_TGT ?= 
+CH_PRE_TGT  ?= 
+CH_MAIN_TGT ?= cppTgt
+CH_POST_TGT ?= 
 
 # automatically
 ifeq (,$(findstring esphome,$(VIRTUAL_ENV)))
 endif
 
 # Use these to specify dependicies that customize cleaning.  This inializes them.
-CPT_EXTRA_CLEAN_TGT    := $(if $(CPT_EXTRA_CLEAN_TGT),$(CPT_EXTRA_CLEAN_TGT),)
-CPT_EXTRA_REALCLEAN_TGT:= $(if $(CPT_EXTRA_REALCLEAN_TGT),$(CPT_EXTRA_REALCLEAN_TGT),)
+CH_EXTRA_CLEAN_TGT    := $(if $(CH_EXTRA_CLEAN_TGT),$(CH_EXTRA_CLEAN_TGT),)
+CH_EXTRA_REALCLEAN_TGT:= $(if $(CH_EXTRA_REALCLEAN_TGT),$(CH_EXTRA_REALCLEAN_TGT),)
 
-ifeq ($(CPT_SRCS),)
-  $(error "set CPT_SRCS to the files you want to run dehash.sh on")
+ifeq ($(CH_SRCS),)
+  $(error "set CH_SRCS to the files you want to run dehash.sh on")
 endif
 
-ifeq ($(CPT_GEN),)
-  $(error "set CPT_GEN to the files you want to run cpp on")
+ifeq ($(CH_GEN),)
+  $(error "set CH_GEN to the files you want to run cpp on")
 endif
 
 ifeq ($(shell which gcc),)
@@ -64,116 +64,116 @@ else
     SED=sed
 endif
 
-ifeq ($(CPT_BUILD_DIR),.)
-  $(error "CPT_BUILD_DIR set to . is not supported.")
+ifeq ($(CH_BUILD_DIR),.)
+  $(error "CH_BUILD_DIR set to . is not supported.")
 endif
 
-CPT_TMP_DIR  := $(CPT_BUILD_DIR)/$(CPT_TMP_SUBDIR)
-CPT_DEHASH   := $(CPT_HOME)/dehash.sh --cpp
-CPT_INFILES  := $(sort $(patsubst ./%,%,$(CPT_SRCS)))
-CPT_OUTFILES := $(addprefix $(CPT_BUILD_DIR)/,$(patsubst ./%,%,$(CPT_GEN)))
+CH_TMP_DIR  := $(CH_BUILD_DIR)/$(CH_TMP_SUBDIR)
+CH_DEHASH   := $(CH_HOME)/dehash.sh --cpp
+CH_INFILES  := $(sort $(patsubst ./%,%,$(CH_SRCS)))
+CH_OUTFILES := $(addprefix $(CH_BUILD_DIR)/,$(patsubst ./%,%,$(CH_GEN)))
 
-CPT_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc \
-		 $(CPT_EXTRA_FLAGS)
+CH_CPPFLAGS := -x c -E -P -undef -Wundef -Werror -nostdinc \
+		 $(CH_EXTRA_FLAGS)
 
 # setup #includes so that all dehashed source directories come first,
 # followed by all source directories. Thus, includes of yaml files will
 # include the dehashes variants of the file and includes of non-yaml
 # files such as images will come from the source tree.
 
-CPT_CPPINCS   := -I $(CPT_TMP_DIR)					\
+CH_CPPINCS   := -I $(CH_TMP_DIR)					\
 	         $(foreach d,$(patsubst %/,%,				\
-		   $(sort $(dir $(CPT_SRCS)))),-I $(CPT_TMP_DIR)/$(d))	\
+		   $(sort $(dir $(CH_SRCS)))),-I $(CH_TMP_DIR)/$(d))	\
 	         $(foreach d,$(patsubst %/,%,				\
-		   $(sort $(dir $(CPT_SRCS)))),-I $(d))			\
-		 $(CPT_EXTRA_INCS)
+		   $(sort $(dir $(CH_SRCS)))),-I $(d))			\
+		 $(CH_EXTRA_INCS)
 
-CPT_CPPDEFS   := -D CPT_USER_$(USER)=1 -D CPT_USER=$(USER)   \
-	       $(CPT_EXTRA_DEFS)
+CH_CPPDEFS   := -D CH_USER_$(USER)=1 -D CH_USER=$(USER)   \
+	       $(CH_EXTRA_DEFS)
 
-CPT_CPP	= gcc $(CPT_CPPFLAGS) $(CPT_CPPINCS) $(CPT_CPPDEFS) 
+CH_CPP	= gcc $(CH_CPPFLAGS) $(CH_CPPINCS) $(CH_CPPDEFS) 
 
-# CPT_TMP_SRCS is the list of dehashed files in CPT_TMP_DIR
-CPT_TMP_SRCS = $(addprefix $(CPT_TMP_DIR)/, \
-		 $(sort $(patsubst ./%,%,$(CPT_INFILES))))
+# CH_TMP_SRCS is the list of dehashed files in CH_TMP_DIR
+CH_TMP_SRCS = $(addprefix $(CH_TMP_DIR)/, \
+		 $(sort $(patsubst ./%,%,$(CH_INFILES))))
 
 # create all build directories (sort filters duplicates)
-CPT_MKDIRS := $(sort $(CPT_BUILD_DIR)		\
-		     $(CPT_TMP_DIR)		\
-		     $(dir $(CPT_TMP_SRCS))	\
-		     $(dir $(CPT_OUTFILES)))
+CH_MKDIRS := $(sort $(CH_BUILD_DIR)		\
+		     $(CH_TMP_DIR)		\
+		     $(dir $(CH_TMP_SRCS))	\
+		     $(dir $(CH_OUTFILES)))
 
-$(shell mkdir -p $(CPT_MKDIRS))
+$(shell mkdir -p $(CH_MKDIRS))
 
-# skip include of esphome.mk by defining CPT_NO_ESPHOME to non-empty
-ifeq (,$(CPT_NO_ESPHOME))
+# skip include of esphome.mk by defining CH_NO_ESPHOME to non-empty
+ifeq (,$(CH_NO_ESPHOME))
   # include esphome.mk if ESP_INIT is defined
   ifneq (,$(ESP_INIT))
-    CPT_MAIN_TGT = esphomeTgt
-    include $(CPT_HOME)/esphome.mk
+    CH_MAIN_TGT = esphomeTgt
+    include $(CH_HOME)/esphome.mk
   endif
 endif
 
-all: $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT) 
+all: $(CH_PRE_TGT) $(CH_MAIN_TGT) $(CH_POST_TGT) 
 
 define _uptodate
   printf "cpphash.mk: $(1) is up to date.\n";
 endef
 
-cppTgt: $(CPT_INFILES) $(CPT_OUTFILES)
-	@$(foreach tgt,$(notdir $(CPT_OUTFILES)),$(call _uptodate,$(tgt)))
+cppTgt: $(CH_INFILES) $(CH_OUTFILES)
+	@$(foreach tgt,$(notdir $(CH_OUTFILES)),$(call _uptodate,$(tgt)))
 
-$(CPT_INFILES):
+$(CH_INFILES):
 	$(error source file $@ does not exist)
 
-# Emit the rules that run cpp to generate all the CPT_OUTFILES
+# Emit the rules that run cpp to generate all the CH_OUTFILES
 
 define _cpp
-$(CPT_BUILD_DIR)/$(1): $(CPT_TMP_DIR)/$(1) $(CPT_TMP_SRCS)
-	$(CPT_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
-	$(CPT_CPP_MORE)
+$(CH_BUILD_DIR)/$(1): $(CH_TMP_DIR)/$(1) $(CH_TMP_SRCS)
+	$(CH_CPP) -MD -MP -MT $$@ -MF $$<.d $$< -o $$@
+	$(CH_CPP_MORE)
 endef
-$(foreach src,$(patsubst ./%,%,$(CPT_GEN)),$(eval $(call _cpp,$(src))))
+$(foreach src,$(patsubst ./%,%,$(CH_GEN)),$(eval $(call _cpp,$(src))))
 
 # Emit the rules that dehash the sources into the project directory
 
 define _dehash
-$(CPT_TMP_DIR)/$(1): $(1)
+$(CH_TMP_DIR)/$(1): $(1)
 	@printf "Dehashing to $$@\n"
-	@$(CPT_DEHASH) $$< >$$@
+	@$(CH_DEHASH) $$< >$$@
 endef
 
-$(foreach src,$(patsubst ./%,%,$(CPT_INFILES)), $(eval $(call _dehash,$(src))))
+$(foreach src,$(patsubst ./%,%,$(CH_INFILES)), $(eval $(call _dehash,$(src))))
 
 # Include the dependency rules generated from a previous build, if any
 
--include $(wildcard $(CPT_TMP_DIR)/*.d)
+-include $(wildcard $(CH_TMP_DIR)/*.d)
 
-clean: $(CPT_EXTRA_CLEAN_TGT)
-	rm -rf $(CPT_TMP_DIR) $(CPT_OUTFILES) $(CPT_CLEAN_FILES)
-	$(CPT_CLEAN_MORE)
+clean: $(CH_EXTRA_CLEAN_TGT)
+	rm -rf $(CH_TMP_DIR) $(CH_OUTFILES) $(CH_CLEAN_FILES)
+	$(CH_CLEAN_MORE)
 
-realclean: clean $(CPT_EXTRA_REALCLEAN_TGT)
-	-@if [ "`git -C $(CPT_HOME) status --porcelain`" != "" ]; then	\
-		printf "$(CPT_HOME) not porcelain. Leaving it.\n";	\
+realclean: clean $(CH_EXTRA_REALCLEAN_TGT)
+	-@if [ "`git -C $(CH_HOME) status --porcelain`" != "" ]; then	\
+		printf "$(CH_HOME) not porcelain. Leaving it.\n";	\
 	else								\
-		echo rm -rf $(CPT_HOME);				\
-		rm -rf $(CPT_HOME);					\
+		echo rm -rf $(CH_HOME);				\
+		rm -rf $(CH_HOME);					\
 	fi
-	rm -rf $(CPT_TMP_DIR) $(CPT_REALCLEAN_FILES)
-	$(CPT_REALCLEAN_MORE)
+	rm -rf $(CH_TMP_DIR) $(CH_REALCLEAN_FILES)
+	$(CH_REALCLEAN_MORE)
 
 define _print_defaults
-print-defaults:: cppTgt $(CPT_TMP_DIR)/$(1)
+print-defaults:: cppTgt $(CH_TMP_DIR)/$(1)
 	@printf "Default values for $(1)\n"
-	@$(CPT_CPP) -CC $(CPT_TMP_DIR)/$(1) | \
+	@$(CH_CPP) -CC $(CH_TMP_DIR)/$(1) | \
 		grep '^//#default' | $(SED) 's/^../  /'
 endef
 
-$(foreach gen,$(patsubst ./%,%,$(CPT_GEN)), \
+$(foreach gen,$(patsubst ./%,%,$(CH_GEN)), \
     $(eval $(call _print_defaults,$(gen))))
 
-.PRECIOUS: $(CPT_TMP_DIR) $(CPT_BUILD_DIR) $(CPT_HOME)
+.PRECIOUS: $(CH_TMP_DIR) $(CH_BUILD_DIR) $(CH_HOME)
 .PHONY: all clean realclean mkdirs cppTgt print-defaults \
-		    $(CPT_PRE_TGT) $(CPT_MAIN_TGT) $(CPT_POST_TGT)
+		    $(CH_PRE_TGT) $(CH_MAIN_TGT) $(CH_POST_TGT)
 

@@ -6,14 +6,14 @@ _DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$_}" )" &> /dev/null && pwd )
 # This file can be sourced from bash and also from zsh, which is
 # popular on MacOS.
 
-# if CPT_HOME is not set, default to the directory that this Bashrc is in
+# if CH_HOME is not set, default to the directory that this Bashrc is in
 
-if [[ "$CPT_HOME" == "" ]]; then
-  export CPT_HOME=${_DIR}
+if [[ "$CH_HOME" == "" ]]; then
+  export CH_HOME=${_DIR}
 fi
 
-if [ ! -f $CPT_HOME/cpphash.mk ]; then
-  echo "$CPT_HOME not found. Did you run install.sh?"
+if [ ! -f $CH_HOME/cpphash.mk ]; then
+  echo "$CH_HOME not found. Did you run install.sh?"
   return 1
 fi
 
@@ -30,7 +30,7 @@ if [[ "$ESPMAKE_PRJ_ALL" == "" ]]; then
   ESPMAKE_PRJ_ALL="$ESPMAKE_PRJ_HOME/.cpphash_prj_all"
 fi
 if [[ "$ESPMAKE_PRJ_VENV" == "" ]]; then
-  $ESPMAKE_PRJ_VENV="$CPT_HOME/venv"
+  $ESPMAKE_PRJ_VENV="$CH_HOME/venv"
 fi
 
 if [ ! -d $ESPMAKE_PRJ_VENV ]; then

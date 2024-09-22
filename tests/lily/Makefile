@@ -1,5 +1,5 @@
-CPT_HOME := $(shell pwd)/../..
-CPT_GEN  := esphome.yaml secrets.yaml
-CPT_SRCS := $(wildcard *.yaml)
+CH_HOME := $(shell pwd)/../..
+CH_GEN  := esphome.yaml secrets.yaml
+CH_SRCS := $(wildcard *.yaml)
 
-include $(CPT_HOME)/cpphash.mk
+include $(CH_HOME)/cpphash.mk

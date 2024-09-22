@@ -9,7 +9,7 @@ _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 # be renamed Makefile to avoid having to specify the the -f option.
 
 # There are some pre-defined C pre-processor defines that your
-# esphome yaml can use with #ifdef etc. See CPT_EXTRA_DEFS below.
+# esphome yaml can use with #ifdef etc. See CH_EXTRA_DEFS below.
 
 # Refer to https://github.com/maartenSXM/cpphash/blob/main/README.md
 # for more details.
@@ -25,15 +25,15 @@ _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 #   ./install.sh -y -s
 
 # Then, in each each project directory, copy Makefile.cpphash there and
-# individually set CPT_HOME to the common location where the shared
+# individually set CH_HOME to the common location where the shared
 # cpphash is installed by uncommenting the following line:
 
-# CPT_HOME:=/my/shared/cpphash
+# CH_HOME:=/my/shared/cpphash
 
-CPT_HOME ?= ./cpphash
+CH_HOME ?= ./cpphash
 
-ifeq (,$(wildcard $(CPT_HOME)/cpphash.mk))
-  $(info $(CPT_HOME)/cpphash.mk not found. To install it, do this:)
+ifeq (,$(wildcard $(CH_HOME)/cpphash.mk))
+  $(info $(CH_HOME)/cpphash.mk not found. To install it, do this:)
   $(info   git clone https://github.com/maartenSXM/cpphash.git)
   $(info   ./cpphash/install.sh -y)
   $(info   source cpphash/Bashrc)
@@ -85,17 +85,17 @@ ifeq (,$(wildcard build/$(TXTMAKE_PROJECT)))
   $(shell mkdir -p build/$(TXTMAKE_PROJECT))
 endif
 
-# CPT_BUILD_DIR is where TXTMAKE projects are built. If changed, review
+# CH_BUILD_DIR is where TXTMAKE projects are built. If changed, review
 # the definition of TXTMAKE_TOP below.  It declares the relative path to
-# the esphome project directory from CPT_BUILD_DIR. This is done manually
+# the esphome project directory from CH_BUILD_DIR. This is done manually
 # because realpath does not support the --relative-to option on many
 # non-Linux OSs.
 
-CPT_BUILD_DIR = ./build/$(TXTMAKE_PROJECT))
+CH_BUILD_DIR = ./build/$(TXTMAKE_PROJECT))
 
-BUILD_LOG = $(CPT_BUILD_DIR)/makeall.log
+BUILD_LOG = $(CH_BUILD_DIR)/makeall.log
 
-# restart 'make all' with logging to $(CPT_BUILD_DIR)/build.log and console
+# restart 'make all' with logging to $(CH_BUILD_DIR)/build.log and console
 
 # Optionally, use TXTMAKE_AUTOLOG_STDOUT_ONLY=1 on the make command line if you
 # want stderr to not go to the log.  That is useful for paging through any
@@ -112,25 +112,25 @@ endif
 	@printf "Makefile: \"make all\" log is $(TXTMAKE_BUILD_LOG)\n"
 else
 
-# CPT_GEN is the set of files that cpphash runs the C preprocessor on.
-# They can include files from CPT_SRCS (defined below) since the cpphash
+# CH_GEN is the set of files that cpphash runs the C preprocessor on.
+# They can include files from CH_SRCS (defined below) since the cpphash
 # tool arranges that de-commented copies are included, not the originals.
 
-CPT_GEN  ?= $(TXT_INIT)
+CH_GEN  ?= $(TXT_INIT)
 
 # Use this to list subdirectories to #include yaml files from.
 TXTMAKE_DIRS ?= 
 
-# CPT_SRCS is the set of files that cpphash will remove hash-style
+# CH_SRCS is the set of files that cpphash will remove hash-style
 # comments from while leaving any C preprocessor directives so that
 # the file can subsequently be used as a #include by one of the
-# CPT_GEN files.
+# CH_GEN files.
 
-# Builds the list of CPT_SRCS by looking for .yaml files in $(TXTMAKE_DIRS).
+# Builds the list of CH_SRCS by looking for .yaml files in $(TXTMAKE_DIRS).
 
-CPT_SRCS += $(sort $(foreach d,$(TXTMAKE_DIRS),$(wildcard $(d)/*.yaml)) $(CPT_GEN))
+CH_SRCS += $(sort $(foreach d,$(TXTMAKE_DIRS),$(wildcard $(d)/*.yaml)) $(CH_GEN))
 
-# In addition to updates to $(CPT_SRCS) triggering a rebuild of espmake.yaml,
+# In addition to updates to $(CH_SRCS) triggering a rebuild of espmake.yaml,
 # updates to source files in $(TXT_DEPS) are also triggers.
 
 TXTMAKE_DEPS ?= 
@@ -141,10 +141,10 @@ TXT_DEPS += $(foreach d,$(TXTMAKE_DEPS),$(wildcard $(d)/*.c) \
 # If there is a secrets.h file in ./ or ../, use it
 
 ifneq (,$(wildcard ./secrets.h))
-  CPT_EXTRA_FLAGS += -include ./secrets.h
+  CH_EXTRA_FLAGS += -include ./secrets.h
 else
   ifneq (,$(wildcard ../secrets.h))
-    CPT_EXTRA_FLAGS += -include ../secrets.h
+    CH_EXTRA_FLAGS += -include ../secrets.h
   endif
 endif
 
@@ -154,15 +154,15 @@ endif
 # directories come after -I build/<project>/dehashed so
 # includes of yaml files are taken from there.
 
-CPT_EXTRA_INCS += $(foreach d,$(TXTMAKE_DIRS),-I $(d))
+CH_EXTRA_INCS += $(foreach d,$(TXTMAKE_DIRS),-I $(d))
 
 # These #defines are for project adapation. 
 
 # TXTMAKE_TOP is how to get from the build directory back to
-# the esphome project directory. It is relative from CPT_BUILD_DIR.
+# the esphome project directory. It is relative from CH_BUILD_DIR.
 
-CPT_EXTRA_DEFS += -D TXTMAKE_TOP=../..				\
-		  -D TXTMAKE_BUILD_PATH=$(CPT_BUILD_DIR)	\
+CH_EXTRA_DEFS += -D TXTMAKE_TOP=../..				\
+		  -D TXTMAKE_BUILD_PATH=$(CH_BUILD_DIR)	\
 		  -D TXTMAKE_PRJ_DIR=$(TXTMAKE_PRJ_DIR)		\
 		  -D TXTMAKE_PROJECT_NAME=$(TXTMAKE_PROJECT)	\
 		  -D TXTMAKE_PROJECT_$(TXTMAKE_PROJECT)		\
@@ -173,19 +173,19 @@ CPT_EXTRA_DEFS += -D TXTMAKE_TOP=../..				\
 # In turn, it will include cpphash/esphome.mk which handles the esphome
 # file generation and platformio build steps.
 
-include $(CPT_HOME)/cpphash.mk
+include $(CH_HOME)/cpphash.mk
 
 print-config:: $(TXT_INIT)
 	@printf "Makefile variables as processed by cpphash:\n"
 	@printf "  TXTMAKE_PROJECT: $(TXTMAKE_PROJECT)\n"
 	@printf "  TXT_INIT: $(TXT_INIT)\n"
-	@printf "  CPT_GEN:  $(CPT_GEN)\n"
-	@printf "  CPT_SRCS:\n"
-	@$(foreach f,$(CPT_INFILES),printf "    $(f)\n";)
+	@printf "  CH_GEN:  $(CH_GEN)\n"
+	@printf "  CH_SRCS:\n"
+	@$(foreach f,$(CH_INFILES),printf "    $(f)\n";)
 	@printf "  TXT_DEPS:\n"
 	@$(foreach f,$(TXT_DEPS),printf "    $(f)\n";)
 	@printf "Makefile #defines available to yaml files:"
-	@printf "  $(subst -, ,$(subst -D,#define,$(CPT_EXTRA_DEFS)))\n" | sed -e 's/ #/\n  #/g' -e 's/=/ /g'
+	@printf "  $(subst -, ,$(subst -D,#define,$(CH_EXTRA_DEFS)))\n" | sed -e 's/ #/\n  #/g' -e 's/=/ /g'
 	@printf "For #defaults available to yaml files, "
 	@printf "use: make print-defaults\n"
 

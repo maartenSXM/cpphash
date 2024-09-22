@@ -6,7 +6,7 @@
 
 # Note: the including Makefile must define ESP_INIT to an output of
 # cpphash.mk (i.e. it is one of the generated files listed
-# in CPT_GEN).
+# in CH_GEN).
 
 # The including Makefile can also define ESP_YAML to the name of the yaml
 # file that this Makefile should generate using yamlmerge.sh, for processing
@@ -34,9 +34,9 @@ ifeq (,$(ESP_INIT))
 endif
 
 ESP_YAML  ?= espmake.yaml
-ESP_GEN   := $(CPT_BUILD_DIR)/$(ESP_INIT)
-ESP_MAKE  := $(CPT_BUILD_DIR)/$(ESP_YAML)
-ESP_MERGE := $(CPT_HOME)/yamlmerge.sh -e -E
+ESP_GEN   := $(CH_BUILD_DIR)/$(ESP_INIT)
+ESP_MAKE  := $(CH_BUILD_DIR)/$(ESP_YAML)
+ESP_MERGE := $(CH_HOME)/yamlmerge.sh -e -E
 
 # md5 adds .md5 suffix to file names and records them for "make clean"
 md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
@@ -53,13 +53,13 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 .PHONY: esphomeTgt
 
 esphomeTgt: cppTgt $(ESP_MAKE)
-	@printf "esphome.mk: project $(CPT_BUILD_DIR) is up to date.\n"
+	@printf "esphome.mk: project $(CH_BUILD_DIR) is up to date.\n"
 
 # Force an esphome compile if no firmware.bin (ie. it failed to link) or
 # main.cpp is newer than firmware.bin (ie. it failed to compile)
 
 ifeq ($(ESP_NOCOMPILE),)
-  ESP_PIO_DIR:=$(wildcard $(CPT_BUILD_DIR)/.esphome/build/*)
+  ESP_PIO_DIR:=$(wildcard $(CH_BUILD_DIR)/.esphome/build/*)
   ESP_MAIN_CPP:=$(ESP_PIO_DIR)/src/main.cpp
   ESP_FIRMWARE:=$(wildcard $(ESP_PIO_DIR)/.pioenvs/*/firmware.bin)
   ifeq (,$(ESP_FIRMWARE))
@@ -87,13 +87,13 @@ else
 	cd "$(@D)" && esphome compile "$(@F)"
 endif
 	
-define CPT_CLEAN_MORE
+define CH_CLEAN_MORE
 	rm -f $(ESP_MAKE) $(ESP_MD5FILES)
-	@if [ -f $(CPT_BUILD_DIR)/secrets.yaml ]; then	\
-	    echo rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
-	    rm -f $(CPT_BUILD_DIR)/secrets.yaml;	\
+	@if [ -f $(CH_BUILD_DIR)/secrets.yaml ]; then	\
+	    echo rm -f $(CH_BUILD_DIR)/secrets.yaml;	\
+	    rm -f $(CH_BUILD_DIR)/secrets.yaml;	\
 	fi
 endef
 
-CPT_REALCLEAN_MORE := rm -rf $(CPT_BUILD_DIR)/.esphome $(CPT_BUILD_DIR)/*.log
+CH_REALCLEAN_MORE := rm -rf $(CH_BUILD_DIR)/.esphome $(CH_BUILD_DIR)/*.log
 

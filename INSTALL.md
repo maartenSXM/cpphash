@@ -16,9 +16,9 @@ the latest esphome release and esphome dependencies.
 Once installed, cpphash can be activated using 'source Bashrc' for
 those using it with esphome. If cpphash is being used without
 esphome, do noyt source the Bashrc and instead set environment
-variable CPT_HOME to the cpphash install directory using, for example:
+variable CH_HOME to the cpphash install directory using, for example:
 
-  export CPT_HOME=~/git/cpphash
+  export CH_HOME=~/git/cpphash
 
 Alternatively, it can be set in Makefile.cpphash.
 
