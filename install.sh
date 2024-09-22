@@ -82,8 +82,12 @@ if [[ "$(uname)" == "Darwin" ]]; then
     echo "$0: brew is required to continue. Installation aborted."
     exit 1
   fi
-  if (($BASH_VERSINFO < 4)); then
+  if [ -z "${BASH_VERSINFO:-}" ]; then
     confirm "Install brew bash package"	      "brew install bash"
+  else
+    if (($BASH_VERSINFO < 4)); then
+      confirm "Install brew bash package"     "brew install bash"
+    fi
   fi
   if [[ "$(command -v yq)" == "" ]]; then
     confirm "Install brew yq package"	      "brew install yq"

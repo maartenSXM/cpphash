@@ -1,12 +1,14 @@
+
 # Source this file from your project home directory to get
 # some convenience aliases that can be listed with "esp_help".
 
-# setup some defaults for below
+# This file can be sourced from bash and also from zsh, which is
+# popular on MacOS.
 
 # if CPT_HOME is not set, default to the directory that this Bashrc is in
 
 if [[ "$CPT_HOME" == "" ]]; then
-  export CPT_HOME=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+  export CPT_HOME=$(dirname ${BASH_SOURCE:-$_})
 fi
 
 if [ ! -f $CPT_HOME/cpphash.mk ]; then
