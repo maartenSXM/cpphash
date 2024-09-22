@@ -149,7 +149,7 @@ alias ${ESPMAKE_PREFIX}esphome='view $(_ESPMAKE_LAST_BUILD)/esphome.yaml'
 # Aliases to find strings including or excluding the build directory
 
 alias ${ESPMAKE_PREFIX}search="find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
-alias ${ESPMAKE_PREFIX}search_home="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path './build/*' ! -path '*/cpphash/*' -type f -print0 | xargs -0 grep -i"
+alias ${ESPMAKE_PREFIX}search_home="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' -type f -print0 | xargs -0 grep -i"
 alias ${ESPMAKE_PREFIX}search_all="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
 
 # Aliases to search for arg1 and replace it with arg2 in all files.
