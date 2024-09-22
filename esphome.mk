@@ -55,15 +55,23 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 esphomeTgt: cppTgt $(ESP_MAKE)
 	@printf "esphome.mk: project $(CPT_BUILD_DIR) is up to date.\n"
 
-# Force an esphome compilation when firmware.bin creation failed.
+# Force an esphome compile if no firmware.bin (ie. it failed to link) or
+# main.cpp is newer than firmware.bin (ie. it failed to compile)
 
 ifeq ($(ESP_NOCOMPILE),)
   ESP_PIO_DIR:=$(wildcard $(CPT_BUILD_DIR)/.esphome/build/*)
-  ESP_FIRMWARE:=$(wildcard $(ESP_PIO_DIR)/.pioenvs/*/firmware.bin)
   ESP_MAIN_CPP:=$(ESP_PIO_DIR)/src/main.cpp
-  ifeq (yes,$(shell test $(ESP_MAIN_CPP) -nt $(ESP_FIRMWARE) && echo yes))
-    FORCE: ;
-    ESP_FORCE=FORCE
+  ESP_FIRMWARE:=$(wildcard $(ESP_PIO_DIR)/.pioenvs/*/firmware.bin)
+  ifeq (,$(ESP_FIRMWARE))
+        FORCE: ;
+        ESP_FORCE=FORCE
+  else
+    ifneq (,$(ESP_MAIN_CPP))
+      ifeq (yes,$(shell test $(ESP_MAIN_CPP) -nt $(ESP_FIRMWARE) && echo yes))
+        FORCE: ;
+        ESP_FORCE=FORCE
+      endif
+    endif
   endif
 endif
 
