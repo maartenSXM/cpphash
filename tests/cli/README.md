@@ -20,15 +20,3 @@ is also provided in the README file in the top of this repo.
  ../../cpphash.sh -C
 ```
 
-# NOTE
-On MacOS, you need GNU sed to run dehash.sh and cpphash.sh.
-To install GNU sed, please do this:
-```
-brew install gsed
-```
-and then either issue this line in the shell or add this line to
-~/.bashrc and source ~/.bashrc:
-```
-export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
-```
-

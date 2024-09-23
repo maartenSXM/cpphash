@@ -12,7 +12,7 @@ if [[ "$CH_HOME" == "" ]]; then
   export CH_HOME=${_DIR}
 fi
 
-if [ ! -f $CH_HOME/cpphash.mk ]; then
+if [ ! -f $CH_HOME/make/cpphash.mk ]; then
   echo "$CH_HOME not found. Did you run install.sh?"
   return 1
 fi

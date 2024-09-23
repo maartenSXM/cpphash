@@ -22,8 +22,8 @@ variable CH_HOME to the cpphash install directory using, for example:
 
 Alternatively, it can be set in Makefile.cpphash.
 
-Makefile.cpphash and Makefile.espmake use ./build as the build directory.
-That can be changed by editting the Makefile.cpphash or (Makefile.espmake
+Makefile.cpphash and Makefile.esphome use ./build as the build directory.
+That can be changed by editting the Makefile.cpphash or (Makefile.esphome
 and Bashrc).
 
 esp_help will list the convenience aliases defined by Bashrc.

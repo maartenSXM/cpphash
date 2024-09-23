@@ -1,5 +1,5 @@
-CH_HOME := $(shell pwd)/../..
-CH_GEN  := esphome.yaml secrets.yaml
-CH_SRCS := $(wildcard *.yaml)
+CH_HOME      := ../..
+MY_SRC_DIRS  := .
+MY_GEN_FILES := esphome.yaml secrets.yaml
 
-include $(CH_HOME)/cpphash.mk
+include $(CH_HOME)/Makefile.esphome

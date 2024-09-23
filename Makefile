@@ -1,4 +1,0 @@
-MAKECMDGOALS?=all
-
-$(MAKECMDGOALS):
-	$(MAKE) -C examples $(MAKECMDGOALS)

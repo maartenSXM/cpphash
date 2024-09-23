@@ -20,12 +20,13 @@ MERGE := ../../yamlmerge.sh -s -e -E
 test all:
 	@cd $(Y1DIR) && make clean
 	@cd $(Y1DIR) && make build/secrets.yaml 
-	cd $(Y1DIR)  && make ESP_NOCOMPILE=1 build/espmake.yaml
+	cd $(Y1DIR)  && make ESP_NOCOMPILE=1 build/default/espmake.yaml
 	cd $(Y1DIR)  && $(MERGE) < build/espmake.yaml > build/esphome.yaml
 	cd $(Y1DIR)/build && esphome config esphome.yaml >$(OUT1)
 	$(MERGE) < $(Y2) > $(Y2).merged 
 	esphome config $(Y2).merged >$(OUT2)
-	@if xargs -t -a /dev/null diff $(OUT1) $(OUT2); then    \
+	echo diff $(OUT1) $(OUT2)
+	@if diff $(OUT1) $(OUT2); then				\
 	    printf " OK\n*** test passed ***\n"; 		\
 	    rm -rf $(OUT1) $(OUT2) $(Y2).merged;	        \
     	else 							\
