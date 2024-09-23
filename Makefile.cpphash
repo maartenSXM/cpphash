@@ -1,5 +1,5 @@
 # Directory of this Makefile
-_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+MY_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # This Makefile is from https://github.com/maartenSXM/cpphash
 
@@ -32,8 +32,8 @@ _DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 CH_HOME ?= ./cpphash
 
-ifeq (,$(wildcard $(CH_HOME)/cpphash.mk))
-  $(info $(CH_HOME)/cpphash.mk not found. To install it, do this:)
+ifeq (,$(wildcard $(CH_HOME)/install.sh))
+  $(info $(CH_HOME) not installed. To install it, do this:)
   $(info   git clone https://github.com/maartenSXM/cpphash.git)
   $(info   ./cpphash/install.sh -y)
   $(info   source cpphash/Bashrc)
@@ -48,94 +48,51 @@ MAKECMDGOALS ?= all
 MAKE         := $(MAKE) --no-print-directory
 MAKEFILE     := $(lastword $(MAKEFILE_LIST))
 
-# Record each distinct PRJ in .cpphash_prj_all
-define _saveprj
-  $(shell grep -sqxF $1 .cpphash_prj_all || echo $1 >> .cpphash_prj_all)
-endef
+include $(CH_HOME)/make/prjsave.mk
 
-# Check if PRJ= was specified on the command line to select a project.
-ifneq (,$(PRJ))
-  ifeq (,$(wildcard $(PRJ)))	    # check specified espmake project exists
-    $(error $(MAKEFILE): $(PRJ) not found)
-  endif
-  $(shell echo $(PRJ) > .cpphash_prj)
-  $(call _saveprj,$(PRJ))
-else
-  ifneq (,$(wildcard .cpphash_prj))
-    PRJ := $(shell cat .cpphash_prj)
-  else
-    $(info  $(MAKEFILE): Specifiy an text with PRJ=. Like this:)
-    $(error $(MAKEFILE):   make PRJ=./esphome.yaml)
-  endif
+MY_PRJ_PATH  =  $(PRJ)
+MY_PRJ_DIR   =  $(patsubst %/,%,$(dir $(PRJ)))
+MY_PROJECT   =  $(basename $(notdir $(MY_PRJ_PATH)))
+MY_GEN_FILES ?= $(PRJ)
+
+ifeq (,$(wildcard build/$(MY_PROJECT)))
+  $(shell mkdir -p build/$(MY_PROJECT))
 endif
 
-ifeq (,$(wildcard $(PRJ))) # check specified initial file exists
-    $(info $(MAKEFILE): $(PRJ) not found.)
-    $(error $(MAKEFILE): Perhaps run this in the example directory?)
-endif
-
-# set the variable that cpphash/cpphash.mk uses
-TXT_INIT = $(PRJ)
-
-TXTMAKE_PRJ_PATH = $(PRJ)
-TXTMAKE_PRJ_DIR  = $(patsubst %/,%,$(dir $(PRJ)))
-TXTMAKE_PROJECT  = $(basename $(notdir $(TXTMAKE_PRJ_PATH)))
-
-ifeq (,$(wildcard build/$(TXTMAKE_PROJECT)))
-  $(shell mkdir -p build/$(TXTMAKE_PROJECT))
-endif
-
-# CH_BUILD_DIR is where TXTMAKE projects are built. If changed, review
-# the definition of TXTMAKE_TOP below.  It declares the relative path to
+# CH_BUILD_DIR is where projects are built. If changed, review
+# the definition of MY_TOP below.  It declares the relative path to
 # the esphome project directory from CH_BUILD_DIR. This is done manually
 # because realpath does not support the --relative-to option on many
 # non-Linux OSs.
 
-CH_BUILD_DIR = ./build/$(TXTMAKE_PROJECT))
+CH_BUILD_DIR = ./build/$(MY_PROJECT)
 
-BUILD_LOG = $(CH_BUILD_DIR)/makeall.log
-
-# restart 'make all' with logging to $(CH_BUILD_DIR)/build.log and console
-
-# Optionally, use TXTMAKE_AUTOLOG_STDOUT_ONLY=1 on the make command line if you
-# want stderr to not go to the log.  That is useful for paging through any
-# errors on the command line using:
-#    make TXTMAKE_AUTOLOG_STDOUT_ONLY=1 2>&1 >/dev/null | more
-
-ifeq (all,$(TXTMAKE_AUTOLOG)$(MAKECMDGOALS))
-all:
-ifneq (,$(TXTMAKE_AUTOLOG_STDOUT_ONLY))
-	@$(MAKE) -k TXTMAKE_AUTOLOG=1 $(MAKECMDGOALS) | tee $(BUILD_LOG)
-else
-	@$(MAKE) -k TXTMAKE_AUTOLOG=1 $(MAKECMDGOALS) 2>&1 | tee $(BUILD_LOG)
-endif
-	@printf "Makefile: \"make all\" log is $(TXTMAKE_BUILD_LOG)\n"
-else
+include $(CH_HOME)/make/log.mk
 
 # CH_GEN is the set of files that cpphash runs the C preprocessor on.
 # They can include files from CH_SRCS (defined below) since the cpphash
 # tool arranges that de-commented copies are included, not the originals.
 
-CH_GEN  ?= $(TXT_INIT)
+CH_GEN  ?= $(MY_GEN_FILES)
 
 # Use this to list subdirectories to #include yaml files from.
-TXTMAKE_DIRS ?= 
+MY_SRC_DIRS ?= 
 
 # CH_SRCS is the set of files that cpphash will remove hash-style
 # comments from while leaving any C preprocessor directives so that
 # the file can subsequently be used as a #include by one of the
 # CH_GEN files.
 
-# Builds the list of CH_SRCS by looking for .yaml files in $(TXTMAKE_DIRS).
+# Builds the list of CH_SRCS by looking for .yaml files in $(MY_DIRS).
 
-CH_SRCS += $(sort $(foreach d,$(TXTMAKE_DIRS),$(wildcard $(d)/*.yaml)) $(CH_GEN))
+CH_SRCS += $(sort $(foreach d,$(MY_SRC_DIRS),$(wildcard $(d)/*.yaml)) $(CH_GEN))
 
 # In addition to updates to $(CH_SRCS) triggering a rebuild of espmake.yaml,
-# updates to source files in $(TXT_DEPS) are also triggers.
+# updates to source files in $(MY_DEPS) are also triggers.
 
-TXTMAKE_DEPS ?= 
+MY_DEP_DIRS ?= 
 
-TXT_DEPS += $(foreach d,$(TXTMAKE_DEPS),$(wildcard $(d)/*.c) \
+ESP_DEPS += $(foreach d,$(MY_DEP_DIRSS),$(wildcard $(d)/*.c) \
 		$(wildcard $(d)/*.cpp) $(wildcard $(d)/*.h))
 
 # If there is a secrets.h file in ./ or ../, use it
@@ -154,43 +111,38 @@ endif
 # directories come after -I build/<project>/dehashed so
 # includes of yaml files are taken from there.
 
-CH_EXTRA_INCS += $(foreach d,$(TXTMAKE_DIRS),-I $(d))
+CH_EXTRA_INCS += $(foreach d,$(MY_DIRS),-I $(d))
 
 # These #defines are for project adapation. 
 
-# TXTMAKE_TOP is how to get from the build directory back to
+# MY_TOP is how to get from the build directory back to
 # the esphome project directory. It is relative from CH_BUILD_DIR.
 
-CH_EXTRA_DEFS += -D TXTMAKE_TOP=../..				\
-		  -D TXTMAKE_BUILD_PATH=$(CH_BUILD_DIR)	\
-		  -D TXTMAKE_PRJ_DIR=$(TXTMAKE_PRJ_DIR)		\
-		  -D TXTMAKE_PROJECT_NAME=$(TXTMAKE_PROJECT)	\
-		  -D TXTMAKE_PROJECT_$(TXTMAKE_PROJECT)		\
-		  -D TXTMAKE_USER_NAME=$(USER)			\
-		  -D TXTMAKE_USER_$(USER)
+CH_EXTRA_DEFS += -D MY_TOP=../..				\
+		  -D MY_BUILD_PATH=$(CH_BUILD_DIR)	\
+		  -D MY_PRJ_DIR=$(MY_PRJ_DIR)		\
+		  -D MY_PROJECT_NAME=$(MY_PROJECT)	\
+		  -D MY_PROJECT_$(MY_PROJECT)		\
+		  -D MY_USER_NAME=$(USER)			\
+		  -D MY_USER_$(USER)
 
 # This includes the cpphash Makefile fragment that will dehash yamls files.
 # In turn, it will include cpphash/esphome.mk which handles the esphome
 # file generation and platformio build steps.
 
-include $(CH_HOME)/cpphash.mk
+include $(CH_HOME)/make/cpphash.mk
 
-print-config:: $(TXT_INIT)
+print-config:: $(MY_INIT)
 	@printf "Makefile variables as processed by cpphash:\n"
-	@printf "  TXTMAKE_PROJECT: $(TXTMAKE_PROJECT)\n"
-	@printf "  TXT_INIT: $(TXT_INIT)\n"
+	@printf "  MY_PROJECT: $(MY_PROJECT)\n"
 	@printf "  CH_GEN:  $(CH_GEN)\n"
 	@printf "  CH_SRCS:\n"
 	@$(foreach f,$(CH_INFILES),printf "    $(f)\n";)
-	@printf "  TXT_DEPS:\n"
-	@$(foreach f,$(TXT_DEPS),printf "    $(f)\n";)
+	@printf "  MY_DEPS:\n"
+	@$(foreach f,$(MY_DEPS),printf "    $(f)\n";)
 	@printf "Makefile #defines available to yaml files:"
 	@printf "  $(subst -, ,$(subst -D,#define,$(CH_EXTRA_DEFS)))\n" | sed -e 's/ #/\n  #/g' -e 's/=/ /g'
 	@printf "For #defaults available to yaml files, "
 	@printf "use: make print-defaults\n"
 
 .PHONY: print-config
-
-# this endif is from the autolog restart
-endif
-

@@ -1,0 +1,7 @@
+This example is an example of how to use the C preprocessor for yaml
+with the example taken directly from a question on stackoverflow.com.
+
+Namely, from here:
+
+  stackoverflow.com/questions/30328549/yaml-preprocessor-macro-processor
+

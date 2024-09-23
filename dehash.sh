@@ -13,12 +13,27 @@ fi
 
 declare -r usage="`basename $0`: strip hash-style comments
 
-Usage: `basename $0` [-c] [-b] [-h] file\n
+Usage: `basename $0` [-c] [-b] [-n] [-h] [-o <outfile>] <file>\n
+
   -c|--cpp\tkeep CPP directives.
   -b|--blank\tkeep blank lines.
-  -o|--out)\toutfile file (or - for stdout)
+  -n|--noext)\tturn off cpp extensions
+  -o|--out)\toutput to <outfile> (or - for stdout)
   -h|--help\thelp.
-<file> is the file to dehash to stout (or - for stdin).
+ 
+<file> is the file to dehash to stdout (or - for stdin).
+
+dehash extends cpp with the following cpp directives that expand
+to regular CPP directives as follows:
+
+  #default  X no  --> #ifndef X / #define X 0 / #endif
+  #default  X yes --> #ifndef X / #define X 1 / #endif
+  #default  X Y   --> #ifndef X / #define X Y / #endif
+  #default  X     --> #ifndef X / #define X   / #endif
+  #redefine X Y   --> #undef  X / #define X Y
+  #require  X     --> #ifndef X / #error X is not defined / #endif
+
+These cpp extensions can be disabled using -n.
 
 This script is from git repo github.com/maartenSXM/cpphash.
 Note: this script does not vet arguments securely. Do not setuid or host it.
@@ -27,9 +42,10 @@ Note: this script does not vet arguments securely. Do not setuid or host it.
 while [[ $# > 0 ]]
 do
   case $1 in
-    -c|--cpp)	GCCFLAGS="$GCCFLAGS -DCPP"; shift;;
-    -o|--out)	outfile="$2"; shift 2;;
+    -c|--cpp)	GCCFLAGS="$GCCFLAGS -DCPP";   shift;;
+    -n|--noext)	GCCFLAGS="$GCCFLAGS -DNOEXT"; shift;;
     -b|--blank)	GCCFLAGS="$GCCFLAGS -DBLANK"; shift;; 
+    -o|--out)	outfile="$2"; shift 2;;
     -h|--help)	printf "$usage"; exit 0;;
     *) break
   esac
@@ -38,14 +54,14 @@ done
 GCC="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror -"
 
 file="$1"
-if [ "$file" == "" ]; then
+if [[ "$file" == "" ]]; then
   file=/dev/stdin
 fi
 
-if [ "$outfile" == "" ]; then
+if [[ "$outfile" == "" ]]; then
   outfile=/dev/stdout
 else
-  if [ "$outfile" == "-" ]; then
+  if [[ "$outfile" == "-" ]]; then
     outfile=/dev/stdout
   fi
 fi
@@ -86,14 +102,15 @@ echo '
     # // This will handle multi-line comments and multi-line cpp directives.
     :x; /\\\s*$/ { N; s/\\\n//; tx }
 
+  #ifndef NOEXT
     # // Map "#default X no" to "#ifndef X \n#define X 0\n#endif\n"
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*no)($|\s.*$)@//#default \1\2\3\n#   ifndef \1\n#   define \1 0\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*no)($|\s.*$)@//#default \1\2\3\n#   ifndef \1\n#    define \1 0\n#   endif@}
 
     # // Map "#default X yes" to "#ifndef X \n#define X 1\n#endif\n"
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*yes)($|\s.*$)@//#default \1\2\3\n#   ifndef \1\n#   define \1 1\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*yes)($|\s.*$)@//#default \1\2\3\n#   ifndef \1\n#    define \1 1\n#   endif@}
 
     # // Map "#default X Y" to "#ifndef X \n#define X Y\n#endif\n"
-    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*)(.*)$@//#default \1\2\3\n#   ifndef \1\n#   define \1\t\3\n#   endif@}
+    {s@^\s*#\s*default\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*)(.*)$@//#default \1\2\3\n#   ifndef \1\n#    define \1\t\3\n#   endif@}
 
     # // Map "#default X" to "#ifndef X \n#define X\n#endif\n"
     # // Not recommended in general since #ifdef X is legit code without
@@ -104,8 +121,12 @@ echo '
     # // Map "#redefine X Y" to "#undef X \n#define X Y\n"
     {s@^\s*#\s*redefine\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*)(\s\s*)(.*)$@//#redefine \1\2\3\n#   undef   \1\n#   define  \1 \3@}
 
-    # // Done expanding #default or #redefine, go to next line
-    /^\/\/#(default|redefine) /b
+    # // Map "#require X" to "#ifndef X \n#error X is not defined \n#endif\n"
+    {s@^\s*#\s*require\s\s*([a-zA-Z0-9_][a-zA-Z0-9_]*).*$@//#require \1\n#   ifndef \1\n#    error \1 is not defined\n#   endif@}
+
+    # // Done expanding #default, #redefine and #require. Go to next line
+    /^\/\/#(default|redefine|require) /b
+  #endif // !NOEXT
 
     # // Keep cpp directive lines, go to next line
     /^\s*#\s*(assert\s|define\s|elif\s|else|endif|error|ident\s|if\s|ifdef\s|ifndef\s|import\s|include\s|include_next\s|line\s|pragma\s|sccs\s|unassert\s|undef\s|warning)/b

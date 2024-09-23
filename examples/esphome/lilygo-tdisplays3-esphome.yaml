@@ -1,4 +1,4 @@
-// note there is a binary sensor delcared later also
+// note there is a binary sensor declared later also
 // cpphash/esphome.mk will merge them.
 
 binary_sensor:
@@ -14,10 +14,7 @@ esphome:
   platformio_options:
     board_build.f_flash: 80000000L
 
-external_components:
-  - source: "github://landonr/lilygo-tdisplays3-esphome"
-    components: [tdisplays3]
-
+#default CONFIG_DEFAULT_PARTITIONS yes
 #if CONFIG_DEFAULT_PARTITIONS
 esphome:
   platformio_options:
@@ -38,6 +35,7 @@ esp32:
 # Enable logging
 logger:
 
+#default CONFIG_HA                 no
 #if CONFIG_HA
 # Enable Home Assistant API
 api:
@@ -62,6 +60,9 @@ time:
     id: ha_time
 #endif // CONFIG_HA
 
+#default CONFIG_DISPLAY no
+
+#if CONFIG_DISPLAY
 binary_sensor:
   - platform: gpio
     pin:
@@ -95,7 +96,10 @@ font:
     id: roboto
     size: 30
 
-#if CONFIG_DISPLAY
+external_components:
+  - source: "github://landonr/lilygo-tdisplays3-esphome"
+    components: [tdisplays3]
+
 display:
   - platform: tdisplays3
     id: disp

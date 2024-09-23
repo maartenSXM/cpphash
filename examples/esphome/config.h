@@ -2,9 +2,9 @@
 #define _INCLUDE_CONFIG_H_
 
 // Config specific to a project tag
-#ifdef ESPMAKE_PROJECT_lily
+#ifdef MY_PROJECT_lily
   #define CONFIG_DISPLAY		1	// touchscreen display?
-#endif // ESPMAKE_PROJECT_lily
+#endif // MY_PROJECT_lily
  
 // Config specific to specific $USER
 #ifdef _USER_blort

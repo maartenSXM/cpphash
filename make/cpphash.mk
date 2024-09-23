@@ -110,7 +110,7 @@ ifeq (,$(CH_NO_ESPHOME))
   # include esphome.mk if ESP_INIT is defined
   ifneq (,$(ESP_INIT))
     CH_MAIN_TGT = esphomeTgt
-    include $(CH_HOME)/esphome.mk
+    include $(CH_HOME)/make/esphome.mk
   endif
 endif
 
