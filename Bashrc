@@ -32,6 +32,11 @@ fi
 if [[ "$ESPMAKE_PRJ_VENV" == "" ]]; then
   $ESPMAKE_PRJ_VENV="$CH_HOME/venv"
 fi
+if [[ "$(uname)" == "Darwin" ]]; then
+  SED=gsed
+else
+  SED=sed
+fi
 
 if [ ! -d $ESPMAKE_PRJ_VENV ]; then
   echo "$ESPMAKE_PRJ_VENV not found. Did you run install.sh?"
@@ -158,13 +163,13 @@ alias ${ESPMAKE_PREFIX}search_all="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -nam
 # bash does not seem to allow these to be defined with ESPMAKE_PREFIX.
 
 esp_replace_nohash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s#$1#$2#g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s#$1#$2#g"
 }
 esp_replace_nocomma() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s,$1,$2,g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s,$1,$2,g"
 }
 esp_replace_noslash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs sed --in-place=.bak "s/$1/$2/g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/build/*' ! -path '*/cpphash*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s/$1/$2/g"
 }
 alias esp_replace="esp_replace_noslash"
 
