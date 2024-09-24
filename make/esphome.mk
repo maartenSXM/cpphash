@@ -60,7 +60,7 @@ esphomeTgt: cppTgt $(ESP_MAKE)
 
 ifeq ($(ESP_NOCOMPILE),)
   ESP_PIO_DIR:=$(wildcard $(CH_BUILD_DIR)/.esphome/build/*)
-  ESP_MAIN_CPP:=$(ESP_PIO_DIR)/src/main.cpp
+  ESP_MAIN_CPP:=$(wildcard $(ESP_PIO_DIR)/src/main.cpp)
   ESP_FIRMWARE:=$(wildcard $(ESP_PIO_DIR)/.pioenvs/*/firmware.bin)
   ifeq (,$(ESP_FIRMWARE))
         FORCE: ;
