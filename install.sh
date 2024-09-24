@@ -65,7 +65,6 @@ confirm() {
     done
   fi
 
-  echo "$2"
   eval "$2"
 
   if (($? != 0)); then

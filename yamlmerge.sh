@@ -93,6 +93,10 @@ if [ "$yaml" != "/dev/stdin" ]; then
   if [ "$outfile" != "/dev/stdout" ]; then
     ncompsin=$(grep -E '^[[:alnum:]_]+:$' $yaml | wc -l)
     ncompsout=$(grep -E '^[[:alnum:]_]+:$' $outfile | wc -l)
+    shopt -s extglob
+    ncompsin="${ncompsin##*( )}"	# trim leading whitespace
+    ncompsout="${ncompsout##*( )}"	# trim leading whitespace
+    shopt -u extglob
     printf '%b' "$0: \033[1mMerged $ncompsin" 1>&2
     printf '%b\n' " components into $ncompsout.\033[0m"	1>&2
   fi
