@@ -37,7 +37,8 @@ ifeq (,$(wildcard $(CH_HOME)/install.sh))
   $(info   git clone https://github.com/maartenSXM/cpphash.git)
   $(info   ./cpphash/install.sh -y)
   $(info   source cpphash/Bashrc)
-  $(error and try again)
+  $(info and try again)
+  $(error Or, alternatively, set a CH_HOME environment or make variable)
 endif
 
 ifeq (,$(VIRTUAL_ENV))
@@ -55,8 +56,9 @@ MY_PRJ_DIR   =  $(patsubst %/,%,$(dir $(PRJ)))
 MY_PROJECT   =  $(basename $(notdir $(MY_PRJ_PATH)))
 MY_GEN_FILES ?= $(PRJ)
 
-ifeq (,$(wildcard build/$(MY_PROJECT)))
-  $(shell mkdir -p build/$(MY_PROJECT))
+CH_BUILD ?= build
+ifeq (,$(wildcard $(CH_BUILD)/$(MY_PROJECT)))
+  $(shell mkdir -p $(CH_BUILD)/$(MY_PROJECT))
 endif
 
 # CH_BUILD_DIR is where projects are built. If changed, review
@@ -65,7 +67,7 @@ endif
 # because realpath does not support the --relative-to option on many
 # non-Linux OSs.
 
-CH_BUILD_DIR = ./build/$(MY_PROJECT)
+CH_BUILD_DIR = $(CH_BUILD)/$(MY_PROJECT)
 
 include $(CH_HOME)/make/log.mk
 
@@ -108,7 +110,7 @@ endif
 # Use this to list additional #include directories
 
 # Allow #include from all source directories.  Note these
-# directories come after -I build/<project>/dehashed so
+# directories come after -I $(CH_BUILD_DIR)/dehashed so
 # includes of yaml files are taken from there.
 
 CH_EXTRA_INCS += $(foreach d,$(MY_DIRS),-I $(d))

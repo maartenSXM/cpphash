@@ -23,7 +23,7 @@ ifeq (,$(CH_HOME))
 CH_HOME := $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
 endif
 ifeq (,$(CH_BUILD_DIR))
-CH_BUILD_DIR := build
+CH_BUILD_DIR := $(CH_BUILD)
 endif
 ifeq (,$(CH_TMP_SUBDIR))
 CH_TMP_SUBDIR := dehashed

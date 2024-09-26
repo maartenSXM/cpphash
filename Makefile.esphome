@@ -56,7 +56,8 @@ MY_PROJECT  = $(basename $(notdir $(MY_PRJ_PATH)))
 # because realpath does not support the --relative-to option on many
 # non-Linux OSs.
 
-CH_BUILD_DIR = build/$(MY_PROJECT)
+CH_BUILD ?= build
+CH_BUILD_DIR = $(CH_BUILD)/$(MY_PROJECT)
 
 # include $(CH_HOME)/make/log.mk
 
