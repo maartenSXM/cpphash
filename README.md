@@ -56,7 +56,7 @@ Some possible dehash command variants are:
 
 idmerge.sh
 ===========
-idmerge.sh: read yaml and output merged yaml using an id tag.
+idmerge.sh: merge yaml common blocks with an id: tag
 
 Usage
 -----

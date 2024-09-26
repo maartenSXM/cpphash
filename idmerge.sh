@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# idmerge.sh: read esphome yaml and output merged esphome yaml.
+# idmerge.sh: merge yaml common blocks with an id: tag
 
 # Common blocks are merged backwards in the output by referencing tags
 # specified in "id: <tag>" yaml lines. The first common block to
@@ -13,7 +13,7 @@
 # Usage: idmerge.sh -id <idTag> <input.yaml >output.yaml
 
 # After running idmerge.sh, it is advised to postprocess the yaml with
-# awk '/^[[:alnum:]_]/{print "---"} | yq '... comments=""' esphome.yaml
+# awk '/^[[:alnum:]_]/{print "---"} | yq '... comments=""' file.yaml
 # before piping it into yq to merge sections using:
 
 #   yq eval-all '. as $item ireduce ({}; . *+ $item)'
@@ -26,7 +26,7 @@
 # Require all variables to be declared - to catch variable typos early.
 
 declare -r me=${0##*/}  # basename of this script
-declare -r usage="$me: read yaml and output merged yaml using an id tag.
+declare -r usage="$me: merge yaml common blocks with an id: tag
 
 Usage: $me: [-q] [-p] [-m] [-h] [-t tag] [-o outfile] <file.yaml>\n
   -t|--tag\tItem tag that uniquely names what to merge. Defaults to "id".
@@ -124,7 +124,7 @@ declare -a -i block_from    # block first line number
 declare -a -i block_to      # block last line number
 declare -a -i block_idline  # block "id:" line if it has one, else zero
 
-# These read-only strings are used to identify special esphome yaml lines.
+# These read-only strings are used to identify special yaml lines.
 
 declare -r newdoc="---"
 declare -r is_array='^[[:blank:]]*- ([[:alnum:]: _]+)[[:blank:]]*$'
@@ -135,7 +135,7 @@ declare -r is_comment='^[[:blank:]]*#.*$'
 declare -r is_blank='^[[:blank:]]*$'
 declare -r get_mapname='^([[:alnum:]_]+):.*$'
 
-# This function reads in esphome yaml on stdin.
+# This function reads in yaml on stdin.
 
 read_lines () {
   declare -i n=0
