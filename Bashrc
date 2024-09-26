@@ -73,7 +73,7 @@ if [[ "$_ESPMAKE_DEV0" == "" ]]; then
   _ESPMAKE_DEV0=/dev/ttyACM0
 fi
 if [[ "$_ESPMAKE_DEV1" == "" ]]; then
-  _ESPMAKE_DEV0=/dev/ttyACM1
+  _ESPMAKE_DEV1=/dev/ttyACM1
 fi
 
 
