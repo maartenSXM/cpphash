@@ -1,11 +1,15 @@
-# cpphash.sh 
+This project enables the C pre-processor to be run on files containing hash-style comments. It provides shell scripts that can be used to integrate with any build system and it also provides Makefiles to enable make.  It has optional support for esphome projects, for which it was originally written.
+
+cpphash.sh 
+==========
 
 run the C preprocessor (cpp) on files with hash-style comments
 
-## Usage
+Usage
+-----
 ```
 ./cpphash.sh [-f] [-C] [-v] [-h] [-t <dir>] [-D define|define=<x>] [-I includedir] cppFile [extraFiles]...
--t|--tempdir	argument is a directory for temporary files. Defaults is .cpphash
+-t|--tempdir	argument is a directory for temporary files. Default is .cpphash
 -D|--define>	add the argument as a define to pass to cpp
 -I|--include	add the argument as an include file directory to pass to cpp
 -o|--outfile	argument is a filename to write to.  Default is <cppFile>.cpp 
@@ -18,13 +22,17 @@ run the C preprocessor (cpp) on files with hash-style comments
 cppFile		the main file to run cpp on which optionally includes <extraFiles>.
 [extraFiles]	extra files to process that are #included by <cppFile>
 
-./cpphash.sh overwrites the file specified by -o (default is <cppFile>.cpp)
+cpphash.sh processes <cppFile> and <extraFiles> using dehash.sh. The dehashed <extraFiles> are stored in <tempDir>. The dehashed <cppFile> is stored in <cppFile>.cpp. Then <cppFile> is run through the C pre-processor with -I <tempDir> as the first include directory path.
+
+Note: ./cpphash.sh overwrites the file specified by -o (default is <cppFile>.cpp)
 ```
 
-# dehash.sh
-dehash.sh removes '#'-style comments
+dehash.sh
+=========
+dehash.sh removes '#'-style comments 
 
-## Usage
+Usage
+-----
 ```
 dehash.sh [-c] [-b] [-h] filename
 -c|--cpp	keep CPP directives
@@ -34,10 +42,9 @@ dehash.sh [-c] [-b] [-h] filename
 filename	file to dehash to stout or - for stdin
 ```
 
-dehash was originally written to remove hash-style comments in text files
-such as yaml that require the C-preprocessor for macro features. cpphash.sh
-was added as a front-end for dehash.sh to do exactly that for any text files,
-including yaml.
+dehash.sh was removes hash style comments from one file.  Use cpphash.sh
+to run dehash.sh on multiple files and to run teh C-preprocessor on one of
+them that includes one or more of the others.
 
 Some possible dehash command variants are:
 ```
@@ -46,136 +53,97 @@ Some possible dehash command variants are:
  ./dehash.sh -b example.txt
  ./dehash.sh -c -b example.txt
 ```
-Note: cpphash uses GNU sed, md5sum and yq.
 
-If missing, yq can be installed on Linux with:
+espmerge.sh
+===========
+espmerge.sh: reads esphome yaml and outputs merged esphome yaml.
 
-  sudo apt install yq -y
-    or
-  snap install yq --channel=v3/stable
-    or
-  apk add yq
-
-On MacOS, usually all three are missing and can be installed as follows:
+Usage
+-----
 ```
-  brew install gsed md5sha1sum yq
-```
-## How to use this repo
-
-"makefile" and "Makefile" are functional makefile templates that will clone
-this repo into a project.
-To use them, just copy them both into a project directory that does not
-already use makefiles.  If your project already does, then you likely
-already know how to integrate them to your project.
-
-There is an example in example/make that shows how to use make and cpphash
-to assist with managing multiple project variants that share text files.
-That example shows how to share constant #defines and configuration
-#defines between text files and C / C++ files. See the files main.yaml,
-config.h and pins.h in example/make for more details.
-
-## User variables
-
-These variables can be changed from their defaults by editting
-"Makefile" or overriding them with a CLI argument to make such as
-```bash
-make MAIN=init.yaml
+espmerge.sh <input.yaml >output.yaml
 ```
 
-### OUTDIR
+espmerge.sh parses yaml into common blocks and merges sections that
+are repeated *and* named.
 
-Where to write generated files, including the cpphash repo itself.
-Unlike the other user variables, it is set in "makefile".
+Common blocks are merged backwards in the output by referencing tags
+specified in "id: <tag>" yaml lines. The first common block to
+specify a unique <tag> is the destination for subsequent references.
+lines in subsequent blocks are merged at the end of the block
+that declared "id: <tag>" first. Array elements are each treated
+as common blocks so it is possible to merge into an array element
+as long as it declares itself using "id: <tag>".
 
-### MAIN
+After running espmerge.sh, it is advised to merge remaining repeated
+sections that are not named with "id: <tag>" by piping the espmerge.sh
+output through this pipe which sets up each section as a separate yaml
+document and then removes yaml comments;
+```
+awk '/^[[:alnum:]_]/{print "---"} | yq '... comments=""' esphome.yaml
+```
+and then piping its out into yq to merge the multiple documents using:
 
-The initial/main text file that "#include"s the others. It defaults
-to "main.yaml".
+```
+  yq eval-all '. as $item ireduce ({}; . *+ $item)'
+```
+For an example of how this is done, refer to the yamlmerge.sh implementation.
 
-### SUFFIX
+yamlmerge.sh
+============
+yamlmerge.sh: merge duplicate map keys in non-compliant yaml
 
-The suffix of source files that will be dehash-ed so that they can be
-included by <MAIN>.  <MAIN> may not end up including them all however they
-will be dehash-ed regardless.  See user variables DIRS and SRCS. SUFFIX
-defaults to the file suffix of <MAIN>, including the '.'.
+Usage
+-----
+yamlmerge.sh: [-okseEqh] [-o outfile] <file.yaml>\n
+  -o|--outfile	File to write to, else stdout.
+  -k|--keep	Keep yaml comments.
+  -s|--sort	Sort the map keys.
+  -e|--esphoist	Hoist the esphome: and esp32: map keys to output first.
+  -E|--espmerge	Enable esphome item merging using \"id\": references.
+  -q|--quiet	Do not output the number of merged components.
+  -h|--help	Output this help.
 
-### DIRS
+<file.yaml>	The yaml file to merge, else stdin.
 
-The directories that are searched for files ending in <SUFFIX> to dehash. 
-See user variable SRCS. It defaults to ".".
-
-### SRCS
-
-The list of files to dehash.  It defaults *.<SUFFIX> wildcards in
-the directories dpecified by DIRS
-
-### PREFIX
-
-cpphash.mk generates a single filename named <PREFIX><PROJTAG>.
-PREFIX defaults to "./myProj_"
-
-### PROJTAG
-
-PROJTAG is used to uniquely declar the project name. It defaults to "0"
-but it can be any character string of any length. To build different
-project variants from the same project directory, specify a different
-PROJTAG for each by overriding it on the make command line using, for
-example, make PROJTAG=1.
-
-Argument -D_PROJTAG_$(PROJTAG) is passed to the C-preprocessor so that
-text sources can vary the generated file using #if directives such as:
-```code
-#if _PROJTAG_foo
-# yaml code only for project foo goes here
-#endif
-Some other C preprocessor defines are passed as well.  They can be
-found by reviewing the CPPDEFS definition in cpphash/cpphash.mk.
+yamlmerge.sh processes a single yaml files using these steps:
+```
+  First, yaml comments are optionally removed using yq.
+  Then espmerge.sh is run if requested.
+  Then map keys are each put in their own yaml document, using awk.
+  Then map keys are merged using yq.
+  Then map keys are optionally sorted using yq.
+  Then esphome map keys are optionally hoisted using yq.
 ```
 
-## Generated files
-cpphash.mk generates output file <OUTDIR>/<PREFIX><PROJTAG>.<SUFFIX>
-Intermediate C-preprocessed files used to generate it are stored in
-directory <OUTDIR>/<PREFIX><PROJTAG>/
+Installation
+============
 
-Both can be deleted using 'make clean'.
+Please refer to INSTALL.md for information relating to cpphash installation.
 
-## Other
+How to use this repo
+====================
 
-There are some additional comments describing cpptest features in
-Makefile.
+Use the cpphash.sh, dehash.sh, espmerge.sh or yamlmerge.sh scripts
+individually or optionally use the Makefile.cpphash or Makefile.esphome
+makefiles.
 
-You will note that cpphash.mk uses dehash.sh to remove the
-hash-style comments before running the files through the c-preprocessor.
-It leverages a sed script to do that and sets up dehash.sh flags 
-to leave the C preprocessor directives.
+Makefile.cpphash implements a cpphash project build mechanism using make.
+See examples/stackoverflow for an example of how to use it,.
+Makefile.cpphash implements a cpphash project build mechanism using make
+specifically for esphome yaml files. See examples/esphome for an example
+of how to use it.
 
-There are some aliases in file Bashrc also which may be helpful for
-issuing esphome commands.
+To use either Makefile.cpphash or Makefile.esphome, copy one of them into
+a project directory that does not already use make. If your project already
+does, then you likely already know how to integrate them into your project.
 
-There is an optional esphome.mk that may be useful to those
-using this project with esphome projects, such as the example project.
-YMMV.
+For an example of a larger project that uses cpphash and has customized
+Makefile.esphome, see github.com/maartenSXM/GrowOS
 
 # Credits
 
 Thank you to Landon Rohatensky for the exemplary esphome yaml file
 https://github.com/landonr/lilygo-tdisplays3-esphome used to demonstrate
 configuration & build and also as used in the test subdirectory.
-
-# Disclaimers
-
-The author has not attempted to use cpphash with Visual Studio.
-
-# MacOS Note
-
-Note (repeated intentionally): on MacOS, you need GNU sed to run dehash.sh,
-which dehash.sh invokes. To install GNU sed, please do this:
-```
-brew install gsed
-```
-and then add this line to your .bashrc:
-```
-export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:$PATH"
-```
-and then 'source .bashrc' or logout and log back in.
 

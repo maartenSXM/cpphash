@@ -18,9 +18,9 @@ Usage: $me: [-okseEqh] [-o outfile] <file.yaml>\n
   -s|--sort\tSort the map keys.
   -e|--esphoist\tHoist the esphome: and esp32: map keys to output first.
   -E|--espmerge\tEnable esphome item merging using \"id\": references.
-  -q|--quiet\tdo not output the number of merged components.
-  -h|--help\toutput this help.
-<file.yaml>\tyaml file to operate, else stdin.
+  -q|--quiet\tDo not output the number of merged components.
+  -h|--help\tOutput this help.
+<file.yaml>\tThe yaml file to merge, else stdin.
 
 This script is from git repo github.com/maartenSXM/cpphash.
 Note: This script does not vet arguments securely. Do not setuid or host it.

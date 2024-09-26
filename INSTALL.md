@@ -1,30 +1,32 @@
 To install cpphash on Linux or Darwin, clone it from github
-and then cd into cpphash and run ./install.sh -y
+and then cd into cpphash and run ./install.sh
 
-To confirm each step, do not specify the -y option.
+To skiphaving to confirm each step, specify the -y option.
 
 If cpphash is only needed for text files that are not esphome
-yaml, teh installation of esphome depencies can be skipped using
-the -s option like this:
+yaml, the installation of some packages that cpphash depends on
+can be skipped using the -s option like this:
 
-  ./install.sh -s -y
+  ./install.sh -s
 
-cpphash/install.sh will install its dependencies.  If -s is not
-specified t also creates a virtual python environment containing
-the latest esphome release and esphome dependencies. 
+If -s is not specified install.sh also creates a virtual python
+environment containing the latest esphome release and esphome dependencies. 
 
-Once installed, cpphash can be activated using 'source Bashrc' for
-those using it with esphome. If cpphash is being used without
-esphome, do noyt source the Bashrc and instead set environment
-variable CH_HOME to the cpphash install directory using, for example:
+cpphash scipts can be run without any environment variables, once
+install.sh has comleted successfullly.
 
-  export CH_HOME=~/git/cpphash
+To use Makefile.cpphash in a project, CH_HOME has to be set to the local
+installation directory of cpphash.  That can be done by creating an
+exported CH_OME environment in your shell of choice or by defining it
+in the project Makefile.
 
-Alternatively, it can be set in Makefile.cpphash.
+To use Makefile.esphome in a project, CH_HOME is also needed. Sourcing
+cpphash/Bashrc automatically sets CH_HOME and is the recommended way
+to use cpphash with esphome projects.
 
-Makefile.cpphash and Makefile.esphome use ./build as the build directory.
-That can be changed by editting the Makefile.cpphash or (Makefile.esphome
-and Bashrc).
+Makefile.cpphash and Makefile.esphome use ./build as the default
+build directory. That can be changed by exporting the environment
+variable CH_BUILD before sourcing Bashrc.
 
 esp_help will list the convenience aliases defined by Bashrc.
 
@@ -62,5 +64,5 @@ set by cpphash/Bashrc:
   _ESPMAKE_IP0=192.168.248.10
   _ESPMAKE_IP1=192.168.248.11
   _ESPMAKE_DEV0=/dev/ttyACM0
-  _ESPMAKE_DEV0=/dev/ttyACM1
+  _ESPMAKE_DEV1=/dev/ttyACM1
 
