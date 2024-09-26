@@ -55,21 +55,24 @@ md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
 esphomeTgt: cppTgt $(ESP_MAKE)
 	@printf "esphome.mk: project $(CH_BUILD_DIR) is up to date.\n"
 
-# Force an esphome compile if no firmware.bin (ie. it failed to link) or
-# main.cpp is newer than firmware.bin (ie. it failed to compile)
-
 ifeq ($(ESP_NOCOMPILE),)
-  ESP_PIO_DIR:=$(wildcard $(CH_BUILD_DIR)/.esphome/build/*)
-  ESP_MAIN_CPP:=$(wildcard $(ESP_PIO_DIR)/src/main.cpp)
-  ESP_FIRMWARE:=$(wildcard $(ESP_PIO_DIR)/.pioenvs/*/firmware.bin)
+  # Force an esphome compile when main.cpp or firmware.bin are not found.
+  # Also force an esphome compile when main.cpp is newer than firmware.bin.
+  FORCE: ;
+  # wildcard-ing avoids having to grok .esphome.name from $(ESP_MAKE)
+  ESP_PIOENVS_DIR:=$(wildcard $(CH_BUILD_DIR)/.esphome/build/*/.pioenvs)
+  ESP_MAIN_CPP:=$(wildcard $(ESP_PIOENVS_DIR)/../src/main.cpp)
+  ESP_FIRMWARE:=$(wildcard $(ESP_PIOENVS_DIR)/*/firmware.bin)
+  ifeq (,$(ESP_MAIN_CPP))
+     ESP_COMPILE_FORCE=FORCE
+  endif
   ifeq (,$(ESP_FIRMWARE))
-        FORCE: ;
-        ESP_FORCE=FORCE
-  else
-    ifneq (,$(ESP_MAIN_CPP))
-      ifeq (yes,$(shell test $(ESP_MAIN_CPP) -nt $(ESP_FIRMWARE) && echo yes))
-        FORCE: ;
-        ESP_FORCE=FORCE
+     ESP_COMPILE_FORCE=FORCE
+  endif
+  ifneq (,$(ESP_MAIN_CPP))
+    ifneq (,$(ESP_FIRMWARE))
+      ifeq (y,$(shell test $(ESP_MAIN_CPP) -nt $(ESP_FIRMWARE) && echo y))
+        ESP_COMPILE_FORCE=FORCE
       endif
     endif
   endif
@@ -77,7 +80,7 @@ endif
 
 # File contents (not timestamps) are used as dependencies in this rule.
 
-$(ESP_MAKE): $(call md5,$(ESP_GEN) $(ESP_DEPS)) $(ESP_FORCE)
+$(ESP_MAKE): $(call md5,$(ESP_GEN) $(ESP_DEPS)) $(ESP_COMPILE_FORCE)
 	@printf "esphome.mk: $(<F:.md5=) changed.\n"
 	$(ESP_MERGE) -o "$@" "$(<:.md5=)"
 	$(ESP_BUILD_MORE)
