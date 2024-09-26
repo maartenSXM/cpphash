@@ -18,7 +18,7 @@ if [ ! -f $CH_HOME/make/cpphash.mk ]; then
 fi
 
 if [[ "$CH_BUILD" == "" ]]; then
-  CH_BUILD="build"
+  export CH_BUILD="build"
 fi
 
 if [[ "$ESPMAKE_PREFIX" == "" ]]; then
@@ -84,7 +84,7 @@ fi
 # of the last project built. Example: $ESPMAKE_PRJ_HOME/build/espinit
 
 _ESPMAKE_LAST_BUILD() {
-    echo "${ESPMAKE_PRJ_HOME}/$(CH_BUILD)/$(basename $(dirname $(cat $ESPMAKE_PRJ_LAST)))_$(basename $(cat $ESPMAKE_PRJ_LAST) .mk)"
+    echo "${ESPMAKE_PRJ_HOME}/$CH_BUILD/$(basename $(dirname $(cat $ESPMAKE_PRJ_LAST)))_$(basename $(cat $ESPMAKE_PRJ_LAST) .mk)"
 }
 
 # Helper function that returns the name of the esphome device as
@@ -103,12 +103,12 @@ alias _ESPMAKE_USB='function _ESPMAKE_USB { _VERB=${1}; _DEV=${2}; cd $(_ESPMAKE
 # Helper alias to upload last project using OTA update to IP _ESPMAKE_IP<arg>
 # Note the indirect variable reference ${!_IP} to choose the _IP 
 
-alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { _IPNUM=${1}; _IP=_ESPMAKE_IP${_IPNUM}; esphome -v upload --device ${!_IP} --file $(_ESPMAKE_LAST_BUILD)/.esphome/$(CH_BUILD)/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin $(_ESPMAKE_LAST_BUILD)/espmake.yaml;}; _ESPMAKE_UPLOAD'
+alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { _IPNUM=${1}; _IP=_ESPMAKE_IP${_IPNUM}; esphome -v upload --device ${!_IP} --file $(_ESPMAKE_LAST_BUILD)/.esphome/$CH_BUILD/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin $(_ESPMAKE_LAST_BUILD)/espmake.yaml;}; _ESPMAKE_UPLOAD'
 
 # _ESPMAKE_IDF_JTAG uses esp-idf directly to burn firmware to /dev/ttyACM0
 
 export ESPTOOL_TESTING=1 # as per esptool/esp32s2.py
-alias _ESPMAKE_IDF_JTAG='(cd $(_ESPMAKE_LAST_BUILD)/.esphome/$(CH_BUILD)/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME) && esptool.py --before default_reset --after no_reset --baud 1500000 --port $_ESPMAKE_DEV0 --chip esp32s2 write_flash -z --flash_size detect 0x10000 firmware.bin 0x1000 bootloader.bin 0x8000 partitions.bin 0x9000 ota_data_initial.bin)'
+alias _ESPMAKE_IDF_JTAG='(cd $(_ESPMAKE_LAST_BUILD)/.esphome/$CH_BUILD/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME) && esptool.py --before default_reset --after no_reset --baud 1500000 --port $_ESPMAKE_DEV0 --chip esp32s2 write_flash -z --flash_size detect 0x10000 firmware.bin 0x1000 bootloader.bin 0x8000 partitions.bin 0x9000 ota_data_initial.bin)'
 
 # Convenience aliases
 
@@ -157,7 +157,7 @@ alias ${ESPMAKE_PREFIX}esphome='view $(_ESPMAKE_LAST_BUILD)/esphome.yaml'
 # Aliases to find strings including or excluding the build directory
 
 alias ${ESPMAKE_PREFIX}search="find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
-alias ${ESPMAKE_PREFIX}search_home="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/$(CH_BUILD)/*' ! -path '*/cpphash/*' -type f -print0 | xargs -0 grep -i"
+alias ${ESPMAKE_PREFIX}search_home="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path "*/$CH_BUILD/*" ! -path './cpphash/*' -type f -print0 | xargs -0 grep -i"
 alias ${ESPMAKE_PREFIX}search_all="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
 
 # Aliases to search for arg1 and replace it with arg2 in all files.
@@ -166,13 +166,13 @@ alias ${ESPMAKE_PREFIX}search_all="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -nam
 # bash does not seem to allow these to be defined with ESPMAKE_PREFIX.
 
 esp_replace_nohash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/$(CH_BUILD)/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s#$1#$2#g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path "*/$CH_BUILD/*" ! -path './cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s#$1#$2#g"
 }
 esp_replace_nocomma() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/$(CH_BUILD)/*' ! -path '*/cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s,$1,$2,g"
+ find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path "*/$CH_BUILD/*" ! -path './cpphash/*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s,$1,$2,g"
 }
 esp_replace_noslash() {
- find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path '*/$(CH_BUILD)/*' ! -path '*/cpphash*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s/$1/$2/g"
+  find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path "*/$CH_BUILD/*" ! -path './cpphash*' ! -path '*/.esphome/*' -type f -print0 | xargs -0 grep -l "$1" | xargs $SED --in-place=.bak "s/$1/$2/g"
 }
 alias esp_replace="esp_replace_noslash"
 
