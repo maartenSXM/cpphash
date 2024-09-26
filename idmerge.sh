@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# espmerge.sh: read esphome yaml and output merged esphome yaml.
+# idmerge.sh: read esphome yaml and output merged esphome yaml.
 
 # Common blocks are merged backwards in the output by referencing tags
 # specified in "id: <tag>" yaml lines. The first common block to
@@ -10,9 +10,9 @@
 # as common blocks so it is possible to merge  into an array element
 # as long as it declares itself using "id: <tag>"
 
-# Usage: espmerge.sh <input.yaml >output.yaml
+# Usage: idmerge.sh -id <idTag> <input.yaml >output.yaml
 
-# After running espmerge.sh, it is advised to postprocess the yaml with
+# After running idmerge.sh, it is advised to postprocess the yaml with
 # awk '/^[[:alnum:]_]/{print "---"} | yq '... comments=""' esphome.yaml
 # before piping it into yq to merge sections using:
 
@@ -21,22 +21,60 @@
 # Maarten's Law: "Everything is more complicated than it should be."
 # For proof of Maarten's Law, uncomment the next line and run this script.
 
-#   more espmerge.sh; exit
+#   more idmerge.sh; exit
 
 # Require all variables to be declared - to catch variable typos early.
+
+declare -r me=${0##*/}  # basename of this script
+declare -r usage="$me: read yaml and output merged yaml using an id tag.
+
+Usage: $me: [-q] [-p] [-m] [-h] [-t tag] [-o outfile] <file.yaml>\n
+  -t|--tag\tItem tag that uniquely names what to merge. Defaults to "id".
+  -o|--outfile\tFile to write to, else stdout.
+  -q|--quiet\tDo not output operational feedback to stdout.
+  -p|--parseinfo\tOutput input parser debug info to stderr
+  -m|--mergeinfo\tOutput merge debug info to stderr
+  -h|--help\tOutput this help.
+
+<file.yaml>\tThe yaml file to merge, else stdin.
+
+This script is from git repo github.com/maartenSXM/cpphash.
+Note: This script does not vet arguments securely. Do not setuid or host it.
+"
 
 set -e
 set -o nounset
 set -o pipefail
 
 if (($BASH_VERSINFO < 4)); then
-  echo "$0 *** bash must be at version 4 or greater. Install it. ***" >&2
+  echo "$me: *** bash must be at version 4 or greater. Install it. ***" >&2
   exit -1
 fi
 
-declare -i chatty=1	    # some operational feedback to stdout
-declare -i dbgParse=0	    # input parser debug output to stderr
-declare -i dbgMerge=0	    # merge engine debug output to stderr
+declare outfile=/dev/stdout # output yaml file
+declare idtoken="id"	    # id tag for yaml item unique keys
+declare -i chatinfo=1	    # some operational feedback to stdout
+declare -i parseinfo=0	    # input parser debug output to stderr
+declare -i mergeinfo=0	    # merge engine debug output to stderr
+
+while [[ $# > 0 ]]
+do
+  case $1 in
+    -h|--help)	    printf "$usage"; exit  0;;
+    -o|--out)	    outfile="$2";    shift 2;;
+    -t|--tag)	    idtoken="$2";    shift 2;;
+    -q|--quiet)	    chatinfo=0;	     shift 1;;
+    -p|--parseinfo) parseinfo=1;	     shift 1;;
+    -m|--mergeinfo) mergeinfo=1;	     shift 1;;
+    *) break
+  esac
+done
+
+if [ -z "${infile:-}" ]; then
+  declare -r infile=/dev/stdin
+else
+  declare -r infile="$1"
+fi
 
 # Tips for debugging:
 
@@ -45,17 +83,16 @@ declare -i dbgMerge=0	    # merge engine debug output to stderr
 
 # 2. For large yaml test files, it is helpful to redirect stdout to
 #    /dev/null and then redirect stderr to more.  That is done
-#    like this: ./espmerge.sh bigtest.yaml 2>&1 >/dev/null | more
+#    like this: ./idmerge.sh bigtest.yaml 2>&1 >/dev/null | more
 #    and that works because the shell does redirections from right to left.
 
-# 3. dbgParse can be set to one to see how blocks are found.
-#    dbgMerge can be set to one to see how blocks are stored and output.
+# 3. parseinfo can be set to one to see how blocks are found.
+#    mergeinfo can be set to one to see how blocks are stored and output.
 
 # FWIW, this script does not use any subprocesses and runs entirely in bash.
 
 # Globals
 
-declare -r me=${0##*/}  # basename of this script
 declare retval		# optional return value of a function
 declare -i nlines=0	# number of yaml lines input 
 declare -i _nlines=0	# number of digits in nlines variable (e.g 2 for 64)
@@ -91,7 +128,7 @@ declare -a -i block_idline  # block "id:" line if it has one, else zero
 
 declare -r newdoc="---"
 declare -r is_array='^[[:blank:]]*- ([[:alnum:]: _]+)[[:blank:]]*$'
-declare -r is_id='^[[:blank:]]+id:[[:blank:]]+([[:alnum:]_]+)[[:blank:]]*$'
+declare -r is_id="^[[:blank:]]+$idtoken:[[:blank:]]+([[:alnum:]_]+)[[:blank:]]*\$"
 declare -r is_key='^[[:blank:]]*([[:alnum:]_]+):[[:blank:]]*$'
 declare -r is_mapkey='^([[:alnum:]_]+:)[[:blank:]]*$|^---$'
 declare -r is_comment='^[[:blank:]]*#.*$'
@@ -121,7 +158,7 @@ read_lines () {
       skip[$n]=1
     fi
     n=n+1
-  done
+  done < $infile
 
   nlines=$n		# number of lines of yaml 
   _nlines=${#nlines}	# number of digits in nlines
@@ -140,21 +177,31 @@ _write_lines () {
   declare -i b  # block index
   declare -i p  # column indentation alignment for merge comment
 
+  # if the line has been flagged to not be output, skip it.
+  # This can happen when it is a merge block and the leading lines
+  # are duplicates.ince the block being merged into has those lines also.
+  # It can also occur for lines in the merge block itself that have
+  # already been output since they moved earlier.
+
   if ((skip[$n] == 1)); then
     return;
   fi
 
   # Output line $n.
 
+  # oldline is 0 when the line is being simply output and not moving.
+
   if ((oldline==0)); then
-    echo "${lines[$n]}"
+    echo "${lines[$n]}" >$outfile
   else
 
     # Round comment column to next highest x10 after yaml line, min 40.
 
     p=(${#lines[$n]}/10+1)*10
     ((p<=40)) && p=40
-    printf "%-*s # espmerge.sh: was line $((oldline+1))\n" $p "${lines[$n]}"
+    printf \
+      "%-*s # idmerge.sh: was line $((oldline+1))\n" $p "${lines[$n]}" \
+      >$outfile
   fi
 
   skip[$n]=1		# a line can only be output once
@@ -209,7 +256,7 @@ _record_work () {
   # If the key has never been seen, save it and return.
 
   if [ -z "${key_block[$key]:-}" ]; then
-    ((dbgMerge)) && echo \
+    ((mergeinfo)) && echo \
       "*** Saved block $((block+1)) $((from+1))-$((to+1)) ($id)" >&2
     key_block[$key]=$block
     return
@@ -220,22 +267,22 @@ _record_work () {
   kb=${key_block[$key]}
   dest=${block_to[$kb]}
 
-  ((dbgMerge)) && echo \
+  ((mergeinfo)) && echo \
       "*** Found block $((kb+1)) for block $((block+1)) $((from+1))-$((to+1)) ($id)" >&2
 
-  ((chatty)) && echo \
-  "$me: Moving lines $((from+1))-$((to+1)) to line $((dest+1)) (id: $id)" >&2
+  ((chatinfo)) && echo \
+  "$me: Moving lines $((from+1))-$((to+1)) to line $((dest+1)) ($idtoken: $id)" >&2
 
   # Skip the id: line since it is in the block being merged into.
 
   skip[$idline]=1
 
-  ((dbgMerge)) && echo "*** Skipping id line $((idline+1)) (id: $id)" >&2
+  ((mergeinfo)) && echo "*** Skipping id line $((idline+1)) ($idtoken: $id)" >&2
 
   # If we are merging an array elemeny, we will skip the from line too.
 
   if [[ "${lines[$from]}" =~ $is_array ]]; then
-    ((dbgMerge)) && ((skip[from]==0)) && echo \
+    ((mergeinfo)) && ((skip[from]==0)) && echo \
 	"*** Skipping array line $((from+1))" >&2
     skip[$from]=1
   fi
@@ -250,7 +297,7 @@ _record_work () {
   n=from-1
 
   while (( n>= 0 )); do
-    if ((dbgMerge==1 && skip[n]==0)); then
+    if ((mergeinfo==1 && skip[n]==0)); then
       if [[ "${lines[$n]}" =~ $is_key ]]; then
         id="${BASH_REMATCH[1]}"	
         echo "*** Skipping key line $((n+1)) ($id)" >&2
@@ -266,7 +313,7 @@ _record_work () {
   done
 }
 
-# Debug function for when dbgParse is set to 1.
+# Debug function for when parseinfo is set to 1.
 
 dump_common_block () {
   declare -r -i b=$1
@@ -403,7 +450,7 @@ _find_blocks() {
 
   _get_indentation "$first"; blockSpaces="$retval"
 
-  ((dbgParse)) && echo \
+  ((parseinfo)) && echo \
     "*** Start _find_block $((first+1)) $((last+1)) \"$key\" \"$idTag\"" >&2
 
   n=$first
@@ -422,7 +469,7 @@ _find_blocks() {
     # If indentation goes left, end the current block.
 
     if [[ "$lineSpaces" < "$blockSpaces" ]]; then
-      ((dbgParse)) && echo "***: Indentation went left"
+      ((parseinfo)) && echo "***: Indentation went left" >&2
       break
     fi
 
@@ -432,7 +479,7 @@ _find_blocks() {
       queue_first[$nqueue]=$n
       # if mapkey, use default tag "id: <null>". Else use the previous line
       if [[ "$blockSpaces" == "" ]]; then
-        queue_idTag[$nqueue]="id: <none>"
+        queue_idTag[$nqueue]="$idtoken: <none>"
       else
         _get_prev_non_skip $n; prev=$retval
         queue_idTag[$nqueue]="${lines[$prev]}"
@@ -440,7 +487,7 @@ _find_blocks() {
       _get_block_to $n 1; n=$retval
       queue_last[$nqueue]=$n
 
-      ((dbgParse)) && echo \
+      ((parseinfo)) && echo \
         "*** Indentation went right $((queue_first[$nqueue]+1)) $((n+1))" >&2
 
       nqueue=nqueue+1
@@ -462,7 +509,7 @@ _find_blocks() {
       _get_block_to $n 0; n=$retval
       queue_last[$nqueue]=$n
 
-      ((dbgParse)) && echo \
+      ((parseinfo)) && echo \
 	"*** Queued block $((queue_first[$nqueue]+1)) $((n+1))" >&2
 
       nqueue=nqueue+1
@@ -475,11 +522,11 @@ _find_blocks() {
 
     if [[ "${lines[$n]}" =~ $is_id ]]; then
       idline=$n
-      ((dbgParse)) && echo "*** Parsed ${BASH_REMATCH[1]} id at $((n+1))" >&2
+      ((parseinfo)) && echo "*** Parsed ${BASH_REMATCH[1]} id at $((n+1))" >&2
       idTag="${BASH_REMATCH[1]}"
     fi
     
-    ((dbgParse)) && echo "*** Queued line $((n+1))" >&2
+    ((parseinfo)) && echo "*** Queued line $((n+1))" >&2
 
     _get_next_non_skip $n; n=$retval
   done
@@ -495,7 +542,7 @@ _find_blocks() {
     block_idline[$nblocks]=idline
     block_key[$nblocks]="$key"
 
-    ((dbgParse)) && \
+    ((parseinfo)) && \
 	  dump_common_block $nblocks
 
     nblocks=nblocks+1
@@ -508,7 +555,7 @@ _find_blocks() {
 		 "$key" "${queue_idTag[$q]}"
   done
 
-  ((dbgParse)) && echo \
+  ((parseinfo)) && echo \
     "*** End _find_block $((first+1)) $((last+1)) \"$key\" \"${idTag}\"" >&2
 
   retval=$n
@@ -530,7 +577,7 @@ find_blocks() {
       _find_blocks $n $((nlines-1)) "$key" ""
       n=$retval
     else
-      echo "$me: Error: line $((n+1)) is not a map key: ${lines[$n]}"
+      echo "$me: Error: line $((n+1)) is not a map key: ${lines[$n]}" >&2
       exit -1
     fi
   done 

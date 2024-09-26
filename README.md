@@ -34,16 +34,16 @@ dehash.sh removes '#'-style comments
 Usage
 -----
 ```
-dehash.sh [-c] [-b] [-h] filename
+dehash.sh [-c] [-b] [-h] [-o file] filename
 -c|--cpp	keep CPP directives
 -b|--blank	keep blank lines
 -h|--help	help
--o|--out <file>	file to write output to, else stdout
-filename	file to dehash to stout or - for stdin
+-o|--out <file>	file to write output else stdout
+filename	file to dehash or - for stdin.
 ```
 
 dehash.sh was removes hash style comments from one file.  Use cpphash.sh
-to run dehash.sh on multiple files and to run teh C-preprocessor on one of
+to run dehash.sh on multiple files and to run the C-preprocessor on one of
 them that includes one or more of the others.
 
 Some possible dehash command variants are:
@@ -54,17 +54,25 @@ Some possible dehash command variants are:
  ./dehash.sh -c -b example.txt
 ```
 
-espmerge.sh
+idmerge.sh
 ===========
-espmerge.sh: reads esphome yaml and outputs merged esphome yaml.
+idmerge.sh: read yaml and output merged yaml using an id tag.
 
 Usage
 -----
 ```
-espmerge.sh <input.yaml >output.yaml
+Usage: idmerge.sh: [-q] [-p] [-m] [-h] [-t tag] [-o outfile] <file.yaml>
+  -t|--tag	 Item tag that uniquely names what to merge. Defaults to "id".
+  -o|--outfile	 File to write to, else stdout.
+  -q|--quiet	 Do not output operational feedback to stdout.
+  -p|--parseinfo Output input parser debug info to stderr
+  -m|--mergeinfo Output merge debug info to stderr
+  -h|--help	 Output this help.
+
+<file.yaml>\tThe yaml file to merge, else stdin.
 ```
 
-espmerge.sh parses yaml into common blocks and merges sections that
+idmerge.sh parses yaml into common blocks and merges sections that
 are repeated *and* named.
 
 Common blocks are merged backwards in the output by referencing tags
@@ -75,8 +83,8 @@ that declared "id: <tag>" first. Array elements are each treated
 as common blocks so it is possible to merge into an array element
 as long as it declares itself using "id: <tag>".
 
-After running espmerge.sh, it is advised to merge remaining repeated
-sections that are not named with "id: <tag>" by piping the espmerge.sh
+After running idmerge.sh, it is advised to merge remaining repeated
+sections that are not named with "id: <tag>" by piping the idmerge.sh
 output through this pipe which sets up each section as a separate yaml
 document and then removes yaml comments;
 ```
@@ -95,21 +103,24 @@ yamlmerge.sh: merge duplicate map keys in non-compliant yaml
 
 Usage
 -----
-yamlmerge.sh: [-okseEqh] [-o outfile] <file.yaml>\n
+```
+yamlmerge.sh: [-o] [-k] [-s] [-e] [-E] [-q] [-h] [-o outfile] <file.yaml>\n
   -o|--outfile	File to write to, else stdout.
   -k|--keep	Keep yaml comments.
   -s|--sort	Sort the map keys.
   -e|--esphoist	Hoist the esphome: and esp32: map keys to output first.
-  -E|--espmerge	Enable esphome item merging using \"id\": references.
+  -i|--idmerge	Enable item merging using \"id\": tag references.
+  -t|--tag	Item tag that uniquely names what to merge. Defaults to "id".
   -q|--quiet	Do not output the number of merged components.
   -h|--help	Output this help.
 
 <file.yaml>	The yaml file to merge, else stdin.
+```
 
 yamlmerge.sh processes a single yaml files using these steps:
 ```
   First, yaml comments are optionally removed using yq.
-  Then espmerge.sh is run if requested.
+  Then idmerge.sh is run if requested.
   Then map keys are each put in their own yaml document, using awk.
   Then map keys are merged using yq.
   Then map keys are optionally sorted using yq.
@@ -124,7 +135,7 @@ Please refer to INSTALL.md for information relating to cpphash installation.
 How to use this repo
 ====================
 
-Use the cpphash.sh, dehash.sh, espmerge.sh or yamlmerge.sh scripts
+Use the cpphash.sh, dehash.sh, idmerge.sh or yamlmerge.sh scripts
 individually or optionally use the Makefile.cpphash or Makefile.esphome
 makefiles.
 

@@ -36,7 +36,7 @@ endif
 ESP_YAML  ?= espmake.yaml
 ESP_GEN   := $(CH_BUILD_DIR)/$(ESP_INIT)
 ESP_MAKE  := $(CH_BUILD_DIR)/$(ESP_YAML)
-ESP_MERGE := $(CH_HOME)/yamlmerge.sh -e -E
+ESP_MERGE := $(CH_HOME)/yamlmerge.sh -e -i -t id
 
 # md5 adds .md5 suffix to file names and records them for "make clean"
 md5 = $(addsuffix .md5,$1)$(eval ESP_MD5FILES += $(addsuffix .md5,$1))
