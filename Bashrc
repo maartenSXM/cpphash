@@ -74,7 +74,11 @@ if [[ "$_ESPMAKE_IP1" == "" ]]; then
   _ESPMAKE_IP1=192.168.248.11
 fi
 if [[ "$_ESPMAKE_DEV0" == "" ]]; then
-  _ESPMAKE_DEV0=/dev/ttyACM0
+  if [[ "$(uname)" == "Darwin" ]]; then
+    _ESPMAKE_DEV0=/dev/tty.usbmodem11101
+  else
+    _ESPMAKE_DEV0=/dev/ttyACM0
+  fi
 fi
 if [[ "$_ESPMAKE_DEV1" == "" ]]; then
   _ESPMAKE_DEV1=/dev/ttyACM1
@@ -95,20 +99,19 @@ _ESPMAKE_LAST_ESPNAME() {
     echo $(yq -r --no-doc .esphome.name $(_ESPMAKE_LAST_BUILD)/espmake.yaml | grep -v null)
 }
 
-# Helper alias that takes an esphome verb and a ACM device number and
+# Helper alias that takes an esphome verb and a device name and
 # issues it on the last built project.
 
-alias _ESPMAKE_USB='function _ESPMAKE_USB { _VERB=${1}; _DEV=${2}; cd $(_ESPMAKE_LAST_BUILD); esphome -v ${_VERB} --device ${_DEV} espmake.yaml; cd -;}; _ESPMAKE_USB'
+alias _ESPMAKE_USB='function _ESPMAKE_USB { cd $(_ESPMAKE_LAST_BUILD); echo esphome -v $1 $2 espmake.yaml;  esphome -v $1 $2 espmake.yaml; cd -;}; _ESPMAKE_USB'
 
-# Helper alias to upload last project using OTA update to IP _ESPMAKE_IP<arg>
-# Note the indirect variable reference ${!_IP} to choose the _IP 
+# Helper alias to upload last project using OTA update 
 
-alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { _IPNUM=${1}; _IP=_ESPMAKE_IP${_IPNUM}; esphome -v upload --device ${!_IP} --file $(_ESPMAKE_LAST_BUILD)/.esphome/$CH_BUILD/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin $(_ESPMAKE_LAST_BUILD)/espmake.yaml;}; _ESPMAKE_UPLOAD'
+alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { cd $(_ESPMAKE_LAST_BUILD); echo "esphome -v upload $1 --file .esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin espmake.yaml"; esphome -v upload $1 --file .esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin espmake.yaml; cd -;}; _ESPMAKE_UPLOAD'
 
 # _ESPMAKE_IDF_JTAG uses esp-idf directly to burn firmware to /dev/ttyACM0
 
 export ESPTOOL_TESTING=1 # as per esptool/esp32s2.py
-alias _ESPMAKE_IDF_JTAG='(cd $(_ESPMAKE_LAST_BUILD)/.esphome/$CH_BUILD/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME) && esptool.py --before default_reset --after no_reset --baud 1500000 --port $_ESPMAKE_DEV0 --chip esp32s2 write_flash -z --flash_size detect 0x10000 firmware.bin 0x1000 bootloader.bin 0x8000 partitions.bin 0x9000 ota_data_initial.bin)'
+alias _ESPMAKE_IDF_JTAG='(cd $(_ESPMAKE_LAST_BUILD)/.esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME) && esptool.py --before default_reset --after no_reset --baud 1500000 --port $_ESPMAKE_DEV0 write_flash -z --flash_size detect 0x10000 firmware.bin 0x1000 bootloader.bin 0x8000 partitions.bin 0x9000 ota_data_initial.bin)'
 
 # Convenience aliases
 
@@ -122,21 +125,21 @@ alias ${ESPMAKE_PREFIX}help="alias | grep -E ${ESPMAKE_PREFIX}\|esp_"
 alias ${ESPMAKE_PREFIX}projects="cat $ESPMAKE_PRJ_ALL"
 
 # Aliases to upload for the last project to IP _ESPMAKE_IP0 or _ESPMAKE_IP1
-alias ${ESPMAKE_PREFIX}upload0="_ESPMAKE_UPLOAD 0"
-alias ${ESPMAKE_PREFIX}upload1="_ESPMAKE_UPLOAD 1"
-alias ${ESPMAKE_PREFIX}upload="${ESPMAKE_PREFIX}upload0"
+alias ${ESPMAKE_PREFIX}upload0='_ESPMAKE_UPLOAD "--device $_ESPMAKE_IP0"'
+alias ${ESPMAKE_PREFIX}upload1='_ESPMAKE_UPLOAD "--device $_ESPMAKE_IP1"'
+alias ${ESPMAKE_PREFIX}upload='_ESPMAKE_UPLOAD'
 
-# Aliases to upload the last project to /dev/ttyACM0 or /dev/ttyACM1
+# Aliases to burn and run the last project to /dev/ttyACM0 or /dev/ttyACM1
 
-alias ${ESPMAKE_PREFIX}jtag0="_ESPMAKE_USB upload $_ESPMAKE_DEV0"
-alias ${ESPMAKE_PREFIX}jtag1="_ESPMAKE_USB upload $_ESPMAKE_DEV1"
-alias ${ESPMAKE_PREFIX}jtag="${ESPMAKE_PREFIX}jtag0"
+alias ${ESPMAKE_PREFIX}run0="_ESPMAKE_USB run "--device $_ESPMAKE_DEV0"'
+alias ${ESPMAKE_PREFIX}run1="_ESPMAKE_USB run "--device $_ESPMAKE_DEV1"'
+alias ${ESPMAKE_PREFIX}run="_ESPMAKE_USB run
 
 # Aliases to monitor logs on /dev/ttyACM0 or /dev/ttyACM1
 
-alias ${ESPMAKE_PREFIX}logs0="_ESPMAKE_USB logs 0"
-alias ${ESPMAKE_PREFIX}logs1="_ESPMAKE_USB logs 1"
-alias ${ESPMAKE_PREFIX}logs="${ESPMAKE_PREFIX}logs0"
+alias ${ESPMAKE_PREFIX}logs0='_ESPMAKE_USB logs "--device $_ESPMAKE_DEV0"'
+alias ${ESPMAKE_PREFIX}logs1='_ESPMAKE_USB logs "--device $_ESPMAKE_DEV1"'
+alias ${ESPMAKE_PREFIX}logs='_ESPMAKE_USB logs'
 
 # Alias to build the current project
 
@@ -156,9 +159,9 @@ alias ${ESPMAKE_PREFIX}esphome='view $(_ESPMAKE_LAST_BUILD)/esphome.yaml'
 
 # Aliases to find strings including or excluding the build directory
 
-alias ${ESPMAKE_PREFIX}search="find . ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
-alias ${ESPMAKE_PREFIX}search_home="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' ! -path "*/$CH_BUILD/*" ! -path './cpphash/*' -type f -print0 | xargs -0 grep -i"
-alias ${ESPMAKE_PREFIX}search_all="find $ESPMAKE_PRJ_HOME ! -name '*.swp' ! -name '*.bak' ! -path '*/.git/*' -type f -print0 | xargs -0 grep -i"
+alias ${ESPMAKE_PREFIX}search='find . ! -name "*.swp" ! -name "*.bak" ! -path "*/.git/*" -type f -print0 | xargs -0 grep -i'
+alias ${ESPMAKE_PREFIX}search_home='find $ESPMAKE_PRJ_HOME ! -name "*.swp" ! -name "*.bak" ! -path "*/.git/*" ! -path "*/$CH_BUILD/*" ! -path "./cpphash/*" -type f -print0 | xargs -0 grep -i'
+alias ${ESPMAKE_PREFIX}search_all='find $ESPMAKE_PRJ_HOME ! -name "*.swp" ! -name "*.bak" ! -path "*/.git/*" -type f -print0 | xargs -0 grep -i'
 
 # Aliases to search for arg1 and replace it with arg2 in all files.
 # Backup files are stored in <file>.bak.  There are variants for arg1
