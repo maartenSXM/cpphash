@@ -131,9 +131,9 @@ alias ${ESPMAKE_PREFIX}upload='_ESPMAKE_UPLOAD'
 
 # Aliases to burn and run the last project to /dev/ttyACM0 or /dev/ttyACM1
 
-alias ${ESPMAKE_PREFIX}run0="_ESPMAKE_USB run "--device $_ESPMAKE_DEV0"'
-alias ${ESPMAKE_PREFIX}run1="_ESPMAKE_USB run "--device $_ESPMAKE_DEV1"'
-alias ${ESPMAKE_PREFIX}run="_ESPMAKE_USB run
+alias ${ESPMAKE_PREFIX}run0='_ESPMAKE_USB run "--device $_ESPMAKE_DEV0"'
+alias ${ESPMAKE_PREFIX}run1='_ESPMAKE_USB run "--device $_ESPMAKE_DEV1"'
+alias ${ESPMAKE_PREFIX}run='_ESPMAKE_USB run'
 
 # Aliases to monitor logs on /dev/ttyACM0 or /dev/ttyACM1
 
