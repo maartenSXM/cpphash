@@ -75,13 +75,18 @@ if [[ "$_ESPMAKE_IP1" == "" ]]; then
 fi
 if [[ "$_ESPMAKE_DEV0" == "" ]]; then
   if [[ "$(uname)" == "Darwin" ]]; then
-    _ESPMAKE_DEV0=/dev/tty.usbmodem11101
+    _ESPMAKE_DEV0=/dev/tty.usbmodem01
+    # _ESPMAKE_DEV0=/dev/tty.usbmodem11101
   else
     _ESPMAKE_DEV0=/dev/ttyACM0
   fi
 fi
 if [[ "$_ESPMAKE_DEV1" == "" ]]; then
-  _ESPMAKE_DEV1=/dev/ttyACM1
+  if [[ "$(uname)" == "Darwin" ]]; then
+    _ESPMAKE_DEV1=/dev/tty.usbmodem01
+  else
+    _ESPMAKE_DEV1=/dev/ttyACM1
+  fi
 fi
 
 # Helper function that returns the path to the build directory
@@ -102,11 +107,11 @@ _ESPMAKE_LAST_ESPNAME() {
 # Helper alias that takes an esphome verb and a device name and
 # issues it on the last built project.
 
-alias _ESPMAKE_USB='function _ESPMAKE_USB { cd $(_ESPMAKE_LAST_BUILD); echo esphome -v $1 $2 espmake.yaml;  esphome -v $1 $2 espmake.yaml; cd -;}; _ESPMAKE_USB'
+alias _ESPMAKE_USB='function _ESPMAKE_USB { cd $(_ESPMAKE_LAST_BUILD); echo esphome $1 $2 espmake.yaml; esphome $1 $2 espmake.yaml; cd -;}; _ESPMAKE_USB'
 
 # Helper alias to upload last project using OTA update 
 
-alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { cd $(_ESPMAKE_LAST_BUILD); echo "esphome -v upload $1 --file .esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin espmake.yaml"; esphome -v upload $1 --file .esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin espmake.yaml; cd -;}; _ESPMAKE_UPLOAD'
+alias _ESPMAKE_UPLOAD='function _ESPMAKE_UPLOAD { cd $(_ESPMAKE_LAST_BUILD); echo "esphome upload $1 --file .esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin espmake.yaml"; esphome upload $1 --file .esphome/build/$(_ESPMAKE_LAST_ESPNAME)/.pioenvs/$(_ESPMAKE_LAST_ESPNAME)/firmware.bin espmake.yaml; cd -;}; _ESPMAKE_UPLOAD'
 
 # _ESPMAKE_IDF_JTAG uses esp-idf directly to burn firmware to /dev/ttyACM0
 
