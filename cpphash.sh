@@ -57,7 +57,18 @@ verbose=0
 force=0
 tempdir=.cpphash
 
-gcc="gcc -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror"
+GCC=gcc
+if [[ "$(uname)" == "Darwin" ]]; then
+  # get latest gcc version installed by brew
+  if [[ $(sysctl -n machdep.cpu.brand_string) =~ "Apple" ]]; then
+     pushd /opt/homebrew/bin >/dev/null
+  else
+     pushd /usr/local/bin >/dev/null
+  fi
+  GCC=$(ls -1 gcc-* | tail -1)
+  popd >/dev/null
+fi
+gcc="$GCC -x c -C -undef -nostdinc -E -P -Wno-endif-labels -Wundef -Werror"
 
 while [[ $# > 0 ]]
 do

@@ -97,6 +97,10 @@ if [[ "$(uname)" == "Darwin" ]]; then
   if [[ "$(command -v md5sum)" == "" ]]; then
     confirm "Install brew md5sha1sum package" "brew install md5sha1sum"
   fi
+  brew list gcc &>/dev/null
+  if [ $? -ne 0 ]; then
+    confirm "Install gcc" "brew install gcc"
+  fi
 fi
 
 # If esphome is being installed this message is output at the end so

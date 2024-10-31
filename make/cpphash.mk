@@ -50,7 +50,16 @@ ifeq ($(CH_GEN),)
   $(error "set CH_GEN to the files you want to run cpp on")
 endif
 
-ifeq ($(shell which gcc),)
+GCC:=gcc
+ifeq ($(shell uname),Darwin)
+  # get latest gcc version installed by brew
+  ifneq (,$(findstring Apple,$(shell sysctl -n machdep.cpu.brand_string)))
+     GCC:=$(notdir $(lastword $(wildcard /opt/homebrew/bin/gcc-*)))
+  else
+     GCC:=$(notdir $(lastword $(wildcard /usr/local/bin/gcc-*)))
+  fi
+fi
+ifeq ($(shell which $(GCC)),)
   $(error "gcc not found. Please install it")
 endif
 
@@ -91,7 +100,7 @@ CH_CPPINCS   := -I $(CH_TMP_DIR)					\
 CH_CPPDEFS   := -D CH_USER_$(USER)=1 -D CH_USER=$(USER)   \
 	       $(CH_EXTRA_DEFS)
 
-CH_CPP	= gcc $(CH_CPPFLAGS) $(CH_CPPINCS) $(CH_CPPDEFS) 
+CH_CPP	= $(GCC) $(CH_CPPFLAGS) $(CH_CPPINCS) $(CH_CPPDEFS) 
 
 # CH_TMP_SRCS is the list of dehashed files in CH_TMP_DIR
 CH_TMP_SRCS = $(addprefix $(CH_TMP_DIR)/, \
